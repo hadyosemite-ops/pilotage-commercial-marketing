@@ -4,3 +4,4 @@ dist/
 .vercel
 server/data/*.sqlite
 server/data/*.sqlite-*
+server/.env.save
