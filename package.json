@@ -1,0 +1,16 @@
+{
+  "name": "crm-tool-vercel",
+  "private": true,
+  "type": "module",
+  "description": "Dependances de la fonction serverless api/index.js pour le deploiement Vercel. Pour le developpement local, utiliser server/package.json et client/package.json.",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
+    "csv-parse": "^5.5.6",
+    "pg": "^8.13.0"
+  }
+}
