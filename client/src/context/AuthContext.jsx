@@ -9,8 +9,9 @@ export function AuthProvider({ children }) {
     return raw ? JSON.parse(raw) : null;
   });
 
-  const login = useCallback(async (email, password) => {
-    const { data } = await api.post("/auth/login", { email, password });
+  // credential = le jeton (ID token) renvoye par le bouton "Se connecter avec Google"
+  const googleLogin = useCallback(async (credential) => {
+    const { data } = await api.post("/auth/google", { credential });
     localStorage.setItem("crm_token", data.token);
     localStorage.setItem("crm_user", JSON.stringify(data.user));
     setUser(data.user);
@@ -24,7 +25,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, googleLogin, logout }}>
       {children}
     </AuthContext.Provider>
   );

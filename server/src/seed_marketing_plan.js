@@ -105,26 +105,18 @@ const actions = [
 async function main() {
   await initSchema();
 
-  const ownerEmail = process.env.SEED_ADMIN_EMAIL || "admin@monentreprise.com";
-  const owner = await get("SELECT id FROM users WHERE email = ?", [ownerEmail]);
-
-  if (!owner) {
-    console.error(`Aucun utilisateur trouve pour ${ownerEmail}. Lance d'abord "npm run seed".`);
-    process.exit(1);
-  }
-
   let created = 0, skipped = 0;
   for (const a of actions) {
     const exists = await get("SELECT id FROM marketing_actions WHERE title = ?", [a.title]);
     if (exists) { skipped++; continue; }
     await run(`
-      INSERT INTO marketing_actions (channel, type, title, status, scheduled_date, published_date, reach, engagement, clicks, notes, owner_id)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?) RETURNING id
+      INSERT INTO marketing_actions (channel, type, title, status, scheduled_date, published_date, reach, engagement, clicks, notes)
+      VALUES (?,?,?,?,?,?,?,?,?,?) RETURNING id
     `, [
       a.channel, a.type, a.title, a.status,
       a.scheduled_date || null, a.published_date || null,
       a.reach || 0, a.engagement || 0, a.clicks || 0,
-      a.notes || null, owner.id,
+      a.notes || null,
     ]);
     created++;
   }

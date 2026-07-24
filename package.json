@@ -11,6 +11,7 @@
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.1",
     "csv-parse": "^5.5.6",
-    "pg": "^8.13.0"
+    "pg": "^8.13.0",
+    "google-auth-library": "^9.14.1"
   }
 }

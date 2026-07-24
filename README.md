@@ -2,7 +2,9 @@
 
 Outil interne pour piloter l'activité commerciale et marketing d'une activité de développement/commercialisation d'applications digitales pour l'industrie : suivi des actions marketing (LinkedIn, Instagram), gestion des leads (avec import manuel/CSV), pipeline d'opportunités, et tableau de bord.
 
-Application web complète : backend Node.js/Express + base Postgres (Supabase), frontend React + Tailwind. Pensée pour une petite équipe (2 à 5 personnes), avec authentification simple par email/mot de passe, et hébergement 100% gratuit sur Vercel + Supabase.
+Application web complète : backend Node.js/Express + base Postgres (Supabase), frontend React + Tailwind. Pensée pour une petite équipe (2 à 5 personnes), et hébergement 100% gratuit sur Vercel + Supabase.
+
+> **⚠️ Identification désactivée pour le moment.** L'application est actuellement accessible **sans connexion**, à quiconque a l'URL. C'est un choix temporaire assumé pour simplifier la mise en route — voir la section "Sécurité" plus bas pour la réactiver quand tu seras prêt.
 
 ## Prérequis
 
@@ -26,18 +28,14 @@ Cette même chaîne de connexion (`DATABASE_URL`) est utilisée en local et en p
 ```bash
 cd server
 npm install
-cp .env.example .env      # colle ta DATABASE_URL Supabase, modifie JWT_SECRET et les identifiants du premier admin
-npm run seed               # crée le schéma de la base + le premier compte admin + quelques données d'exemple
+cp .env.example .env      # colle ta DATABASE_URL Supabase
+npm run seed               # crée le schéma de la base + quelques données d'exemple
 
 cd ../client
 npm install
 ```
 
-Identifiants créés par le seed (modifiables dans `server/.env` avant de lancer `npm run seed`) :
-- Email : celui défini par `SEED_ADMIN_EMAIL` (par défaut `admin@monentreprise.com`)
-- Mot de passe : celui défini par `SEED_ADMIN_PASSWORD` (par défaut `ChangeMoi123!`)
-
-**Change ce mot de passe dès la première connexion** (menu Équipe si tu crées un nouveau compte, ou directement en base).
+L'application s'ouvre directement sur le tableau de bord, sans écran de connexion.
 
 ## Importer le plan d'action marketing existant
 
@@ -74,13 +72,18 @@ Cette structure de projet est prête pour Vercel : `vercel.json` à la racine co
 
 1. **Pousse le projet sur GitHub** (nouveau dépôt, `git init` puis `git add . && git commit -m "Initial commit"` et push vers un dépôt créé sur github.com).
 2. Sur [vercel.com](https://vercel.com), **New Project** → importe ce dépôt GitHub.
-3. Dans **Environment Variables**, ajoute :
+3. Dans **Environment Variables**, ajoute (Production, et Preview si tu veux tester des branches) :
    - `DATABASE_URL` → la chaîne de connexion Supabase (identique à celle de `server/.env`)
-   - `JWT_SECRET` → une chaîne longue et aléatoire (différente de celle utilisée en local si tu veux, mais garde-la stable une fois choisie)
+   - `JWT_SECRET` → une chaîne longue et aléatoire (garde la même qu'en local pour éviter de déconnecter tout le monde à chaque déploiement)
 4. Clique **Deploy**. Vercel construit le frontend et déploie la fonction API automatiquement.
-5. Une fois déployé, si ce n'est pas déjà fait localement, lance `npm run seed` **depuis ton poste** (avec la même `DATABASE_URL` dans `server/.env`) pour créer le premier compte admin sur la base Supabase de production — inutile de le refaire, c'est la même base qu'en local.
 
-Chaque membre de l'équipe accède ensuite à l'URL fournie par Vercel (ex. `https://ton-projet.vercel.app`) avec son propre compte (menu Équipe pour en créer).
+Chaque membre de l'équipe accède ensuite directement à l'URL fournie par Vercel (ex. `https://ton-projet.vercel.app`), sans connexion.
+
+## Sécurité — réactiver une identification
+
+L'identification a été désactivée à la demande, pour aller plus vite (voir avertissement en haut de ce document). Concrètement : `server/src/middleware/auth.js` ne vérifie plus le jeton et traite toutes les requêtes comme un utilisateur admin par défaut ; côté frontend, `App.jsx` ne redirige plus vers un écran de connexion.
+
+Tant que c'est le cas, **n'importe qui avec le lien peut voir et modifier toutes les données** (leads, opportunités, etc.). Tant que l'usage reste interne et le lien non partagé publiquement, le risque est limité, mais à réactiver avant toute diffusion plus large. Options possibles plus tard : remettre en place la vérification du jeton dans `auth.js` (restaurer depuis l'historique git), ou repartir sur un système plus simple type code d'accès partagé.
 
 ## Import de leads (CSV)
 
@@ -115,7 +118,7 @@ crm-tool/
     .env.example
   client/                 Frontend React + Vite + Tailwind
     src/
-      pages/               Dashboard, Marketing, Leads, Pipeline, Team, Login
+      pages/               Dashboard, Marketing, Leads, Pipeline, Team
       components/          Layout (navigation), composants UI réutilisables
   exemple_import_leads.csv
 ```

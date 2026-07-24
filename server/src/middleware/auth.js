@@ -10,16 +10,23 @@ export function signToken(user) {
   );
 }
 
+// Identification desactivee temporairement (a la demande de l'utilisateur, qui assume le
+// risque d'un acces non restreint). Pour la reactiver, restaurer la verification du token
+// ci-dessous (voir historique git) : chaque requete est pour l'instant traitee comme un
+// utilisateur admin par defaut, sans verifier de jeton.
 export function requireAuth(req, res, next) {
   const header = req.headers.authorization || "";
   const token = header.startsWith("Bearer ") ? header.slice(7) : null;
-  if (!token) return res.status(401).json({ error: "Non authentifie" });
-  try {
-    req.user = jwt.verify(token, JWT_SECRET);
-    next();
-  } catch {
-    return res.status(401).json({ error: "Session invalide, reconnecte-toi" });
+  if (token) {
+    try {
+      req.user = jwt.verify(token, JWT_SECRET);
+      return next();
+    } catch {
+      // jeton invalide : on ignore et on continue en mode "acces libre"
+    }
   }
+  req.user = { id: null, email: "equipe@local", name: "Equipe", role: "admin" };
+  next();
 }
 
 export function requireAdmin(req, res, next) {
