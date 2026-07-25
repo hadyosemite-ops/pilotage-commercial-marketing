@@ -1,18 +1,31 @@
 import { Routes, Route, Navigate } from "react-router-dom";
+import { useAuth } from "./context/AuthContext.jsx";
 import Layout from "./components/Layout.jsx";
+import Login from "./pages/Login.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import Marketing from "./pages/Marketing.jsx";
 import Leads from "./pages/Leads.jsx";
 import Pipeline from "./pages/Pipeline.jsx";
 import Team from "./pages/Team.jsx";
 
-// Identification desactivee temporairement (acces libre a l'app, sans connexion).
-// Pour la reactiver plus tard : voir server/src/middleware/auth.js et l'historique git
-// de ce fichier pour restaurer la redirection vers /login.
+function RequireAuth({ children }) {
+  const { user } = useAuth();
+  if (!user) return <Navigate to="/login" replace />;
+  return children;
+}
+
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<Layout />}>
+      <Route path="/login" element={<Login />} />
+      <Route
+        path="/"
+        element={
+          <RequireAuth>
+            <Layout />
+          </RequireAuth>
+        }
+      >
         <Route index element={<Dashboard />} />
         <Route path="marketing" element={<Marketing />} />
         <Route path="leads" element={<Leads />} />
