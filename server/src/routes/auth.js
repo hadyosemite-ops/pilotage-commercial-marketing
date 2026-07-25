@@ -26,6 +26,20 @@ function isFirstAllowedEmail(email) {
   return list[0] === email.toLowerCase().trim();
 }
 
+router.post("/login", ah(async (req, res) => {
+  const { email, password } = req.body || {};
+  if (!email || !password) return res.status(400).json({ error: "Email et mot de passe requis" });
+
+  const user = await get("SELECT * FROM users WHERE email = ?", [email.toLowerCase().trim()]);
+  if (!user) return res.status(401).json({ error: "Identifiants incorrects" });
+
+  const ok = bcrypt.compareSync(password, user.password_hash);
+  if (!ok) return res.status(401).json({ error: "Identifiants incorrects" });
+
+  const token = signToken(user);
+  res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
+}));
+
 router.post("/google", ah(async (req, res) => {
   if (!googleClient) {
     return res.status(500).json({ error: "Connexion Google non configuree (GOOGLE_CLIENT_ID manquant)" });
@@ -78,9 +92,24 @@ router.get("/users", requireAuth, ah(async (req, res) => {
   res.json(users);
 }));
 
+// Seul un admin peut creer de nouveaux comptes email/mot de passe (equipe interne de 2 a 5 personnes).
+router.post("/users", requireAuth, requireAdmin, ah(async (req, res) => {
+  const { name, email, password, role } = req.body || {};
+  if (!name || !email || !password) return res.status(400).json({ error: "Champs manquants" });
+
+  const existing = await get("SELECT id FROM users WHERE email = ?", [email.toLowerCase().trim()]);
+  if (existing) return res.status(409).json({ error: "Cet email existe deja" });
+
+  const hash = bcrypt.hashSync(password, 10);
+  const info = await run(
+    "INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?) RETURNING id",
+    [name, email.toLowerCase().trim(), hash, role === "admin" ? "admin" : "member"]
+  );
+
+  res.status(201).json({ id: info.lastInsertRowid, name, email, role: role || "member" });
+}));
+
 // Change le role d'un membre existant (admin/member) — reserve aux admins.
-// Ajouter un NOUVEAU membre se fait via la variable d'environnement ALLOWED_EMAILS
-// (pas de mot de passe a creer : il se connecte simplement avec son compte Google).
 router.put("/users/:id/role", requireAuth, requireAdmin, ah(async (req, res) => {
   const { role } = req.body || {};
   if (!["admin", "member"].includes(role)) return res.status(400).json({ error: "Role invalide" });

@@ -1,11 +1,26 @@
-// Initialise le schema de la base et quelques donnees d'exemple.
-// Les comptes utilisateurs ne sont plus crees ici : ils se creent automatiquement
-// a la premiere connexion Google (voir routes/auth.js), pour l'email autorise
-// dans ALLOWED_EMAILS.
+// Initialise le schema de la base, cree le premier compte admin (email + mot de
+// passe, identification restauree le 2026-07-25) et quelques donnees d'exemple.
+// Idempotent : peut etre relance sans dupliquer le compte admin ni les donnees.
+import bcrypt from "bcryptjs";
 import { get, run, initSchema } from "./db.js";
 
 async function main() {
   await initSchema();
+
+  const adminEmail = process.env.SEED_ADMIN_EMAIL || "admin@monentreprise.com";
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD || "ChangeMoi123!";
+
+  const existingAdmin = await get("SELECT id FROM users WHERE email = ?", [adminEmail]);
+  if (existingAdmin) {
+    console.log(`Un compte existe deja pour ${adminEmail}, creation ignoree.`);
+  } else {
+    const hash = bcrypt.hashSync(adminPassword, 10);
+    await run(
+      "INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, 'admin') RETURNING id",
+      ["Administrateur", adminEmail, hash]
+    );
+    console.log(`Compte admin cree : ${adminEmail} / ${adminPassword} (a changer apres la premiere connexion).`);
+  }
 
   const already = await get("SELECT id FROM marketing_actions LIMIT 1");
   if (already) {
@@ -41,7 +56,6 @@ async function main() {
     [l2.lastInsertRowid, "App suivi de production - Usine Nova", "opportunite", 9500, 40, "2026-09-05"]);
 
   console.log("Schema initialise + donnees de demo creees.");
-  console.log("Connecte-toi avec le bouton Google, en utilisant un email present dans ALLOWED_EMAILS.");
 }
 
 main().catch((err) => {
