@@ -116,8 +116,22 @@ export async function initSchema() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
+    CREATE TABLE IF NOT EXISTS action_plan (
+      id SERIAL PRIMARY KEY,
+      action TEXT NOT NULL,
+      pilote_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      action_date TEXT,
+      deadline TEXT,
+      status TEXT NOT NULL DEFAULT 'a_faire', -- a_faire | en_cours | fait
+      notes TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
     CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
     CREATE INDEX IF NOT EXISTS idx_opps_stage ON opportunities(stage);
     CREATE INDEX IF NOT EXISTS idx_actions_channel ON marketing_actions(channel);
+    CREATE INDEX IF NOT EXISTS idx_action_plan_status ON action_plan(status);
+    CREATE INDEX IF NOT EXISTS idx_action_plan_pilote ON action_plan(pilote_id);
   `);
 }

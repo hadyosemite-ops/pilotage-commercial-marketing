@@ -62,7 +62,7 @@ export default function Dashboard() {
                 <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                 <YAxis tick={{ fontSize: 12 }} />
                 <Tooltip formatter={(v) => formatEUR(v)} />
-                <Bar dataKey="valeur" fill="#2563EB" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="valeur" fill="#0F7173" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -107,9 +107,9 @@ export default function Dashboard() {
                 <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                 <YAxis tick={{ fontSize: 12 }} />
                 <Tooltip />
-                <Bar dataKey="reach" name="Portée" fill="#93c5fd" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="engagement" name="Engagement" fill="#2563EB" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="clicks" name="Clics" fill="#1e3a8a" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="reach" name="Portée" fill="#5DCAA5" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="engagement" name="Engagement" fill="#0F7173" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="clicks" name="Clics" fill="#0D1B2A" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}

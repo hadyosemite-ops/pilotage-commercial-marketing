@@ -42,6 +42,9 @@ const badgeStyles = {
   planifie: "bg-slate-100 text-slate-700",
   publie: "bg-emerald-100 text-emerald-800",
   archive: "bg-slate-100 text-slate-500",
+  a_faire: "bg-slate-100 text-slate-700",
+  en_cours: "bg-amber-100 text-amber-800",
+  fait: "bg-emerald-100 text-emerald-800",
   LinkedIn: "bg-blue-100 text-blue-800",
   Instagram: "bg-pink-100 text-pink-800",
   Autre: "bg-slate-100 text-slate-700",
@@ -58,7 +61,7 @@ export function Badge({ value, label }) {
 export function Button({ children, variant = "primary", className = "", ...props }) {
   const base = "inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
   const variants = {
-    primary: "bg-accent text-white hover:bg-blue-700",
+    primary: "bg-accent text-white hover:bg-[#0B5556]",
     secondary: "bg-white text-slate-700 border border-slate-300 hover:bg-slate-50",
     danger: "bg-white text-rose-600 border border-rose-200 hover:bg-rose-50",
     ghost: "text-slate-600 hover:bg-slate-100",

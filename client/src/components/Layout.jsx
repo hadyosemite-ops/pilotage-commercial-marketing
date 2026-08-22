@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Megaphone, Users, GitBranch, LogOut, Settings2 } from "lucide-react";
+import { LayoutDashboard, Megaphone, Users, GitBranch, ListChecks, LogOut, Settings2 } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 
 const navItems = [
@@ -7,6 +7,7 @@ const navItems = [
   { to: "/marketing", label: "Marketing", icon: Megaphone },
   { to: "/leads", label: "Leads", icon: Users },
   { to: "/pipeline", label: "Pipeline", icon: GitBranch },
+  { to: "/plan-action", label: "Plan d'action", icon: ListChecks },
 ];
 
 export default function Layout() {
@@ -21,9 +22,12 @@ export default function Layout() {
   return (
     <div className="min-h-screen flex bg-slate-50">
       <aside className="w-64 bg-navy text-slate-100 flex flex-col shrink-0">
-        <div className="px-5 py-6 border-b border-white/10">
-          <p className="text-xs font-semibold tracking-wider text-blue-300 uppercase">Pilotage</p>
-          <p className="text-lg font-bold leading-tight">Commercial &amp; Marketing</p>
+        <div className="px-5 py-6 border-b border-white/10 flex items-center gap-3">
+          <img src="/logo.png" alt="Smart Industry" className="w-10 h-10 rounded-lg shrink-0" />
+          <div className="min-w-0">
+            <p className="text-xs font-semibold tracking-wider text-mint uppercase truncate">Smart Industry</p>
+            <p className="text-base font-bold leading-tight">Pilotage Commercial &amp; Marketing</p>
+          </div>
         </div>
         <nav className="flex-1 px-3 py-4 space-y-1">
           {navItems.map(({ to, label, icon: Icon, end }) => (

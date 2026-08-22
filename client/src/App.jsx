@@ -6,6 +6,7 @@ import Dashboard from "./pages/Dashboard.jsx";
 import Marketing from "./pages/Marketing.jsx";
 import Leads from "./pages/Leads.jsx";
 import Pipeline from "./pages/Pipeline.jsx";
+import ActionPlan from "./pages/ActionPlan.jsx";
 import Team from "./pages/Team.jsx";
 
 function RequireAuth({ children }) {
@@ -30,6 +31,7 @@ export default function App() {
         <Route path="marketing" element={<Marketing />} />
         <Route path="leads" element={<Leads />} />
         <Route path="pipeline" element={<Pipeline />} />
+        <Route path="plan-action" element={<ActionPlan />} />
         <Route path="equipe" element={<Team />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

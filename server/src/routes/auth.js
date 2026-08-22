@@ -109,12 +109,68 @@ router.post("/users", requireAuth, requireAdmin, ah(async (req, res) => {
   res.status(201).json({ id: info.lastInsertRowid, name, email, role: role || "member" });
 }));
 
-// Change le role d'un membre existant (admin/member) — reserve aux admins.
-router.put("/users/:id/role", requireAuth, requireAdmin, ah(async (req, res) => {
-  const { role } = req.body || {};
-  if (!["admin", "member"].includes(role)) return res.status(400).json({ error: "Role invalide" });
-  await run("UPDATE users SET role = ? WHERE id = ?", [role, req.params.id]);
-  res.json(await get("SELECT id, name, email, role, created_at FROM users WHERE id = ?", [req.params.id]));
+// Modifie un membre existant : nom, email, role, et mot de passe optionnel (reinitialisation).
+// Reserve aux admins. Empeche de retirer le role admin du dernier administrateur restant.
+router.put("/users/:id", requireAuth, requireAdmin, ah(async (req, res) => {
+  const { id } = req.params;
+  const { name, email, role, password } = req.body || {};
+
+  const target = await get("SELECT * FROM users WHERE id = ?", [id]);
+  if (!target) return res.status(404).json({ error: "Membre introuvable" });
+
+  if (role && !["admin", "member"].includes(role)) {
+    return res.status(400).json({ error: "Role invalide" });
+  }
+
+  if (role === "member" && target.role === "admin") {
+    const admins = await all("SELECT id FROM users WHERE role = 'admin'");
+    if (admins.length <= 1) {
+      return res.status(400).json({ error: "Impossible de retirer le role du dernier administrateur" });
+    }
+  }
+
+  let normalizedEmail = target.email;
+  if (email) {
+    normalizedEmail = email.toLowerCase().trim();
+    const existing = await get("SELECT id FROM users WHERE email = ? AND id != ?", [normalizedEmail, id]);
+    if (existing) return res.status(409).json({ error: "Cet email est deja utilise par un autre compte" });
+  }
+
+  const fields = ["name = ?", "email = ?", "role = ?"];
+  const args = [name || target.name, normalizedEmail, role || target.role];
+
+  if (password) {
+    fields.push("password_hash = ?");
+    args.push(bcrypt.hashSync(password, 10));
+  }
+
+  args.push(id);
+  await run(`UPDATE users SET ${fields.join(", ")} WHERE id = ?`, args);
+
+  res.json(await get("SELECT id, name, email, role, created_at FROM users WHERE id = ?", [id]));
+}));
+
+// Supprime un membre. Reserve aux admins. Un admin ne peut pas supprimer son propre
+// compte, ni supprimer le dernier administrateur restant (l'equipe se retrouverait
+// sans acces admin).
+router.delete("/users/:id", requireAuth, requireAdmin, ah(async (req, res) => {
+  const { id } = req.params;
+  const target = await get("SELECT * FROM users WHERE id = ?", [id]);
+  if (!target) return res.status(404).json({ error: "Membre introuvable" });
+
+  if (req.user?.id != null && String(req.user.id) === String(id)) {
+    return res.status(400).json({ error: "Impossible de supprimer votre propre compte" });
+  }
+
+  if (target.role === "admin") {
+    const admins = await all("SELECT id FROM users WHERE role = 'admin'");
+    if (admins.length <= 1) {
+      return res.status(400).json({ error: "Impossible de supprimer le dernier administrateur" });
+    }
+  }
+
+  await run("DELETE FROM users WHERE id = ?", [id]);
+  res.json({ ok: true });
 }));
 
 export default router;
