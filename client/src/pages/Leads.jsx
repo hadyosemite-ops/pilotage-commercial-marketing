@@ -197,7 +197,7 @@ export default function Leads() {
         <Modal title={`Convertir "${convertModal.name}" en opportunité`} onClose={() => setConvertModal(null)}>
           <form onSubmit={handleConvert} className="space-y-4">
             <Input name="title" label="Titre de l'opportunité" defaultValue={`Opportunité - ${convertModal.name}`} required />
-            <Input name="value_estimate" label="Valeur estimée (€)" type="number" min="0" defaultValue={0} />
+            <Input name="value_estimate" label="Valeur estimée (MAD)" type="number" min="0" defaultValue={0} />
             <Input name="probability" label="Probabilité (%)" type="number" min="0" max="100" defaultValue={50} />
             <Input name="expected_close_date" label="Date de clôture prévue" type="date" />
             <div className="flex justify-end gap-2 pt-2">

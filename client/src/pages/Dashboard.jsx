@@ -7,8 +7,8 @@ const STAGE_LABELS = { opportunite: "Opportunité", negociation: "Négociation",
 const CHANNEL_COLORS = { LinkedIn: "#2563EB", Instagram: "#DB2777", Autre: "#64748B" };
 const STATUS_LABELS = { nouveau: "Nouveau", contacte: "Contacté", qualifie: "Qualifié", disqualifie: "Disqualifié" };
 
-function formatEUR(v) {
-  return new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(v || 0);
+function formatMAD(v) {
+  return new Intl.NumberFormat("fr-MA", { style: "currency", currency: "MAD", maximumFractionDigits: 0 }).format(v || 0);
 }
 
 export default function Dashboard() {
@@ -44,7 +44,7 @@ export default function Dashboard() {
       <PageHeader title="Tableau de bord" subtitle="Vue d'ensemble de l'activité commerciale et marketing" />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-        <StatCard label="Pipeline en cours" value={formatEUR(pipelineOpenValue)} sub={`${data.pipeline.open.c} opportunité(s) ouverte(s)`} highlight />
+        <StatCard label="Pipeline en cours" value={formatMAD(pipelineOpenValue)} sub={`${data.pipeline.open.c} opportunité(s) ouverte(s)`} highlight />
         <StatCard label="Leads au total" value={data.leadsTotal} sub="tous canaux confondus" />
         <StatCard label="Taux de conversion" value={`${data.conversionRate}%`} sub="leads → qualifiés" />
         <StatCard label="Taux de gain" value={`${data.winRate}%`} sub="opportunités closes" />
@@ -61,7 +61,7 @@ export default function Dashboard() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                 <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip formatter={(v) => formatEUR(v)} />
+                <Tooltip formatter={(v) => formatMAD(v)} />
                 <Bar dataKey="valeur" fill="#0F7173" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>

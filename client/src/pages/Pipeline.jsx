@@ -12,8 +12,8 @@ const STAGES = [
 
 const emptyForm = { title: "", stage: "opportunite", value_estimate: 0, probability: 50, expected_close_date: "", lost_reason: "", notes: "" };
 
-function formatEUR(v) {
-  return new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(v || 0);
+function formatMAD(v) {
+  return new Intl.NumberFormat("fr-MA", { style: "currency", currency: "MAD", maximumFractionDigits: 0 }).format(v || 0);
 }
 
 export default function Pipeline() {
@@ -72,7 +72,7 @@ export default function Pipeline() {
     <div>
       <PageHeader
         title="Pipeline des opportunités"
-        subtitle={`${opps.length} opportunité(s) · ${formatEUR(totalOpen)} en cours`}
+        subtitle={`${opps.length} opportunité(s) · ${formatMAD(totalOpen)} en cours`}
         action={<Button onClick={() => openCreate()}><Plus size={16} /> Nouvelle opportunité</Button>}
       />
 
@@ -84,7 +84,7 @@ export default function Pipeline() {
             <div key={stage.value} className={`bg-white rounded-xl border border-slate-200 border-t-4 ${stage.color} flex flex-col`}>
               <div className="px-4 py-3 border-b border-slate-100">
                 <p className="font-semibold text-slate-700 text-sm">{stage.label} <span className="text-slate-400 font-normal">({items.length})</span></p>
-                <p className="text-xs text-slate-400">{formatEUR(stageTotal)}</p>
+                <p className="text-xs text-slate-400">{formatMAD(stageTotal)}</p>
               </div>
               <div className="kanban-col flex-1 p-3 space-y-3 overflow-y-auto max-h-[65vh]">
                 {items.length === 0 && <p className="text-xs text-slate-300 text-center py-6">Aucune opportunité</p>}
@@ -98,7 +98,7 @@ export default function Pipeline() {
                       </div>
                     </div>
                     {o.lead_name && <p className="text-xs text-slate-400 mt-0.5">{o.lead_name}{o.lead_company ? ` · ${o.lead_company}` : ""}</p>}
-                    <p className="text-sm font-semibold text-slate-700 mt-2">{formatEUR(o.value_estimate)}</p>
+                    <p className="text-sm font-semibold text-slate-700 mt-2">{formatMAD(o.value_estimate)}</p>
                     <p className="text-xs text-slate-400">Probabilité : {o.probability}%{o.expected_close_date ? ` · clôture ${o.expected_close_date}` : ""}</p>
                     <select
                       value={o.stage}
@@ -123,7 +123,7 @@ export default function Pipeline() {
               <Select label="Étape" value={form.stage} onChange={(e) => setForm({ ...form, stage: e.target.value })}>
                 {STAGES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
               </Select>
-              <Input label="Valeur estimée (€)" type="number" min="0" value={form.value_estimate} onChange={(e) => setForm({ ...form, value_estimate: Number(e.target.value) })} />
+              <Input label="Valeur estimée (MAD)" type="number" min="0" value={form.value_estimate} onChange={(e) => setForm({ ...form, value_estimate: Number(e.target.value) })} />
               <Input label="Probabilité (%)" type="number" min="0" max="100" value={form.probability} onChange={(e) => setForm({ ...form, probability: Number(e.target.value) })} />
             </div>
             <Input label="Date de clôture prévue" type="date" value={form.expected_close_date || ""} onChange={(e) => setForm({ ...form, expected_close_date: e.target.value })} />
