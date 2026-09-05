@@ -1,36 +1,38 @@
-// Envoi d'email transactionnel via Resend (https://resend.com), en appel HTTP direct
-// (pas de dependance npm supplementaire : fetch natif de Node >= 18).
-const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
+import nodemailer from "nodemailer";
+
+// Envoi d'email transactionnel (mot de passe oublie) via Gmail SMTP, avec un compte
+// Gmail existant + un "mot de passe d'application" genere par Google (pas le mot de
+// passe habituel du compte). Voir server/.env.example pour la marche a suivre.
+const SMTP_USER = process.env.SMTP_USER;
+const SMTP_APP_PASSWORD = process.env.SMTP_APP_PASSWORD;
+
+let transporter = null;
+
+function getTransporter() {
+  if (!SMTP_USER || !SMTP_APP_PASSWORD) {
+    throw new Error("SMTP_USER / SMTP_APP_PASSWORD manquant : impossible d'envoyer l'email de reinitialisation");
+  }
+  if (!transporter) {
+    transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: { user: SMTP_USER, pass: SMTP_APP_PASSWORD },
+    });
+  }
+  return transporter;
+}
 
 export async function sendPasswordResetEmail(to, resetUrl) {
-  if (!RESEND_API_KEY) {
-    throw new Error("RESEND_API_KEY manquant : impossible d'envoyer l'email de reinitialisation");
-  }
-
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${RESEND_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: RESEND_FROM_EMAIL,
-      to,
-      subject: "Reinitialisation de votre mot de passe — Pilotage Commercial & Marketing",
-      html: `
-        <p>Bonjour,</p>
-        <p>Une demande de reinitialisation de mot de passe a ete faite pour votre compte sur
-        l'outil Pilotage Commercial &amp; Marketing.</p>
-        <p><a href="${resetUrl}">Cliquez ici pour choisir un nouveau mot de passe</a></p>
-        <p>Ce lien expire dans 1 heure. Si vous n'etes pas a l'origine de cette demande,
-        vous pouvez ignorer cet email sans risque.</p>
-      `,
-    }),
+  await getTransporter().sendMail({
+    from: `"Pilotage Commercial & Marketing" <${SMTP_USER}>`,
+    to,
+    subject: "Réinitialisation de votre mot de passe — Pilotage Commercial & Marketing",
+    html: `
+      <p>Bonjour,</p>
+      <p>Une demande de réinitialisation de mot de passe a été faite pour votre compte sur
+      l'outil Pilotage Commercial &amp; Marketing.</p>
+      <p><a href="${resetUrl}">Cliquez ici pour choisir un nouveau mot de passe</a></p>
+      <p>Ce lien expire dans 1 heure. Si vous n'êtes pas à l'origine de cette demande,
+      vous pouvez ignorer cet email sans risque.</p>
+    `,
   });
-
-  if (!response.ok) {
-    const body = await response.text().catch(() => "");
-    throw new Error(`Echec de l'envoi de l'email (Resend ${response.status}) : ${body}`);
-  }
 }

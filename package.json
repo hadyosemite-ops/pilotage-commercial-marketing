@@ -12,6 +12,7 @@
     "multer": "^1.4.5-lts.1",
     "csv-parse": "^5.5.6",
     "pg": "^8.13.0",
-    "google-auth-library": "^9.14.1"
+    "google-auth-library": "^9.14.1",
+    "nodemailer": "^6.9.16"
   }
 }
