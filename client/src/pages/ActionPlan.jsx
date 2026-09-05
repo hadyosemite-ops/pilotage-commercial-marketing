@@ -113,19 +113,21 @@ export default function ActionPlan() {
         action={<Button onClick={openCreate}><Plus size={16} /> Nouvelle action</Button>}
       />
 
-      <div className="flex flex-wrap items-center gap-2 mb-4">
-        <span className="text-xs font-medium text-slate-400 uppercase mr-1">Statut</span>
-        <button onClick={() => setFilterStatus("")} className={`px-3 py-1.5 rounded-full text-sm font-medium ${filterStatus === "" ? "bg-navy text-white" : "bg-white border border-slate-200 text-slate-600"}`}>Tous</button>
-        {STATUSES.map((s) => (
-          <button key={s.value} onClick={() => setFilterStatus(s.value)} className={`px-3 py-1.5 rounded-full text-sm font-medium ${filterStatus === s.value ? "bg-navy text-white" : "bg-white border border-slate-200 text-slate-600"}`}>{s.label}</button>
-        ))}
-      </div>
-      <div className="flex flex-wrap items-center gap-2 mb-4">
-        <span className="text-xs font-medium text-slate-400 uppercase mr-1">Origine</span>
-        <button onClick={() => setFilterOrigine("")} className={`px-3 py-1.5 rounded-full text-sm font-medium ${filterOrigine === "" ? "bg-navy text-white" : "bg-white border border-slate-200 text-slate-600"}`}>Toutes</button>
-        {ORIGINES.map((o) => (
-          <button key={o.value} onClick={() => setFilterOrigine(o.value)} className={`px-3 py-1.5 rounded-full text-sm font-medium ${filterOrigine === o.value ? "bg-navy text-white" : "bg-white border border-slate-200 text-slate-600"}`}>{o.label}</button>
-        ))}
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mb-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-medium text-slate-400 uppercase mr-1">Statut</span>
+          <button onClick={() => setFilterStatus("")} className={`px-3 py-1.5 rounded-full text-sm font-medium ${filterStatus === "" ? "bg-navy text-white" : "bg-white border border-slate-200 text-slate-600"}`}>Tous</button>
+          {STATUSES.map((s) => (
+            <button key={s.value} onClick={() => setFilterStatus(s.value)} className={`px-3 py-1.5 rounded-full text-sm font-medium ${filterStatus === s.value ? "bg-navy text-white" : "bg-white border border-slate-200 text-slate-600"}`}>{s.label}</button>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-medium text-slate-400 uppercase mr-1">Origine</span>
+          <button onClick={() => setFilterOrigine("")} className={`px-3 py-1.5 rounded-full text-sm font-medium ${filterOrigine === "" ? "bg-navy text-white" : "bg-white border border-slate-200 text-slate-600"}`}>Toutes</button>
+          {ORIGINES.map((o) => (
+            <button key={o.value} onClick={() => setFilterOrigine(o.value)} className={`px-3 py-1.5 rounded-full text-sm font-medium ${filterOrigine === o.value ? "bg-navy text-white" : "bg-white border border-slate-200 text-slate-600"}`}>{o.label}</button>
+          ))}
+        </div>
       </div>
 
       <Card>

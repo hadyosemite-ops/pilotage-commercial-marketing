@@ -4,10 +4,10 @@ import { useAuth } from "../context/AuthContext.jsx";
 
 const navItems = [
   { to: "/", label: "Tableau de bord", icon: LayoutDashboard, end: true },
+  { to: "/plan-action", label: "Plan d'action", icon: ListChecks },
   { to: "/marketing", label: "Marketing", icon: Megaphone },
   { to: "/leads", label: "Leads", icon: Users },
   { to: "/pipeline", label: "Pipeline", icon: GitBranch },
-  { to: "/plan-action", label: "Plan d'action", icon: ListChecks },
 ];
 
 export default function Layout() {
