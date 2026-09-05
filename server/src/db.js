@@ -123,15 +123,22 @@ export async function initSchema() {
       action_date TEXT,
       deadline TEXT,
       status TEXT NOT NULL DEFAULT 'a_faire', -- a_faire | en_cours | fait
+      origine_type TEXT NOT NULL DEFAULT 'general', -- lead | opportunite | marketing | general
+      origine_id INTEGER, -- id dans leads/opportunities/marketing_actions selon origine_type (pas de FK : cible variable)
       notes TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+
+    -- Migration douce pour les bases deja creees avant l'ajout de l'origine (2026-09) :
+    ALTER TABLE action_plan ADD COLUMN IF NOT EXISTS origine_type TEXT NOT NULL DEFAULT 'general';
+    ALTER TABLE action_plan ADD COLUMN IF NOT EXISTS origine_id INTEGER;
 
     CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
     CREATE INDEX IF NOT EXISTS idx_opps_stage ON opportunities(stage);
     CREATE INDEX IF NOT EXISTS idx_actions_channel ON marketing_actions(channel);
     CREATE INDEX IF NOT EXISTS idx_action_plan_status ON action_plan(status);
     CREATE INDEX IF NOT EXISTS idx_action_plan_pilote ON action_plan(pilote_id);
+    CREATE INDEX IF NOT EXISTS idx_action_plan_origine ON action_plan(origine_type, origine_id);
   `);
 }

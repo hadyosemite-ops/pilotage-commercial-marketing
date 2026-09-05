@@ -9,7 +9,14 @@ const STATUSES = [
   { value: "fait", label: "Fait" },
 ];
 
-const emptyForm = { action: "", pilote_id: "", action_date: "", deadline: "", status: "a_faire", notes: "" };
+const ORIGINES = [
+  { value: "general", label: "Général" },
+  { value: "lead", label: "Lead" },
+  { value: "opportunite", label: "Opportunité" },
+  { value: "marketing", label: "Marketing" },
+];
+
+const emptyForm = { action: "", pilote_id: "", action_date: "", deadline: "", status: "a_faire", origine_type: "general", origine_id: "", notes: "" };
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
@@ -18,19 +25,31 @@ function todayISO() {
 export default function ActionPlan() {
   const [items, setItems] = useState([]);
   const [members, setMembers] = useState([]);
+  const [leads, setLeads] = useState([]);
+  const [opportunities, setOpportunities] = useState([]);
+  const [marketingActions, setMarketingActions] = useState([]);
   const [filterStatus, setFilterStatus] = useState("");
+  const [filterOrigine, setFilterOrigine] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
 
   async function load() {
-    const { data } = await api.get("/action-plan", { params: filterStatus ? { status: filterStatus } : {} });
+    const params = {};
+    if (filterStatus) params.status = filterStatus;
+    if (filterOrigine) params.origine_type = filterOrigine;
+    const { data } = await api.get("/action-plan", { params });
     setItems(data);
   }
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [filterStatus]);
-  useEffect(() => { api.get("/auth/users").then(({ data }) => setMembers(data)); }, []);
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [filterStatus, filterOrigine]);
+  useEffect(() => {
+    api.get("/auth/users").then(({ data }) => setMembers(data));
+    api.get("/leads").then(({ data }) => setLeads(data));
+    api.get("/opportunities").then(({ data }) => setOpportunities(data));
+    api.get("/marketing-actions").then(({ data }) => setMarketingActions(data));
+  }, []);
 
   function openCreate() {
     setEditing(null);
@@ -46,16 +65,22 @@ export default function ActionPlan() {
       action_date: item.action_date || "",
       deadline: item.deadline || "",
       status: item.status,
+      origine_type: item.origine_type || "general",
+      origine_id: item.origine_id || "",
       notes: item.notes || "",
     });
     setModalOpen(true);
+  }
+
+  function handleOrigineTypeChange(value) {
+    setForm({ ...form, origine_type: value, origine_id: "" });
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
     setSaving(true);
     try {
-      const payload = { ...form, pilote_id: form.pilote_id || null };
+      const payload = { ...form, pilote_id: form.pilote_id || null, origine_id: form.origine_id || null };
       if (editing) await api.put(`/action-plan/${editing.id}`, payload);
       else await api.post("/action-plan", payload);
       setModalOpen(false);
@@ -71,20 +96,35 @@ export default function ActionPlan() {
     await load();
   }
 
+  function origineOptionsFor(type) {
+    if (type === "lead") return leads.map((l) => ({ id: l.id, label: `${l.name}${l.company ? ` · ${l.company}` : ""}` }));
+    if (type === "opportunite") return opportunities.map((o) => ({ id: o.id, label: o.title }));
+    if (type === "marketing") return marketingActions.map((m) => ({ id: m.id, label: m.title }));
+    return [];
+  }
+
   const today = todayISO();
 
   return (
     <div>
       <PageHeader
         title="Plan d'action"
-        subtitle="Suivi des actions, pilotes, échéances et statuts"
+        subtitle="Suivi général des actions liées aux leads, opportunités et actions marketing"
         action={<Button onClick={openCreate}><Plus size={16} /> Nouvelle action</Button>}
       />
 
-      <div className="flex gap-2 mb-4">
-        <button onClick={() => setFilterStatus("")} className={`px-3 py-1.5 rounded-full text-sm font-medium ${filterStatus === "" ? "bg-navy text-white" : "bg-white border border-slate-200 text-slate-600"}`}>Toutes</button>
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <span className="text-xs font-medium text-slate-400 uppercase mr-1">Statut</span>
+        <button onClick={() => setFilterStatus("")} className={`px-3 py-1.5 rounded-full text-sm font-medium ${filterStatus === "" ? "bg-navy text-white" : "bg-white border border-slate-200 text-slate-600"}`}>Tous</button>
         {STATUSES.map((s) => (
           <button key={s.value} onClick={() => setFilterStatus(s.value)} className={`px-3 py-1.5 rounded-full text-sm font-medium ${filterStatus === s.value ? "bg-navy text-white" : "bg-white border border-slate-200 text-slate-600"}`}>{s.label}</button>
+        ))}
+      </div>
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <span className="text-xs font-medium text-slate-400 uppercase mr-1">Origine</span>
+        <button onClick={() => setFilterOrigine("")} className={`px-3 py-1.5 rounded-full text-sm font-medium ${filterOrigine === "" ? "bg-navy text-white" : "bg-white border border-slate-200 text-slate-600"}`}>Toutes</button>
+        {ORIGINES.map((o) => (
+          <button key={o.value} onClick={() => setFilterOrigine(o.value)} className={`px-3 py-1.5 rounded-full text-sm font-medium ${filterOrigine === o.value ? "bg-navy text-white" : "bg-white border border-slate-200 text-slate-600"}`}>{o.label}</button>
         ))}
       </div>
 
@@ -96,6 +136,7 @@ export default function ActionPlan() {
             <thead>
               <tr className="text-left text-slate-500 border-b border-slate-200">
                 <th className="py-3 px-4 font-medium">Action</th>
+                <th className="py-3 px-4 font-medium whitespace-nowrap">Origine</th>
                 <th className="py-3 px-4 font-medium whitespace-nowrap">Pilote</th>
                 <th className="py-3 px-4 font-medium whitespace-nowrap">Date de l'action</th>
                 <th className="py-3 px-4 font-medium whitespace-nowrap">Deadline</th>
@@ -109,6 +150,12 @@ export default function ActionPlan() {
                 return (
                   <tr key={a.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
                     <td className="py-3 px-4 text-slate-700 font-medium max-w-sm">{a.action}</td>
+                    <td className="py-3 px-4 whitespace-nowrap">
+                      <div className="flex flex-col gap-1">
+                        <Badge value={a.origine_type} label={ORIGINES.find(o => o.value === a.origine_type)?.label} />
+                        {a.origine_label && <span className="text-xs text-slate-400 max-w-[10rem] truncate" title={a.origine_label}>{a.origine_label}</span>}
+                      </div>
+                    </td>
                     <td className="py-3 px-4 text-slate-600 whitespace-nowrap">{a.pilote_name || "—"}</td>
                     <td className="py-3 px-4 text-slate-500 whitespace-nowrap">{a.action_date || "—"}</td>
                     <td className="py-3 px-4 whitespace-nowrap">
@@ -139,6 +186,21 @@ export default function ActionPlan() {
         <Modal title={editing ? "Modifier l'action" : "Nouvelle action"} onClose={() => setModalOpen(false)} wide>
           <form onSubmit={handleSubmit} className="space-y-4">
             <Textarea label="Action" rows={2} required value={form.action} onChange={(e) => setForm({ ...form, action: e.target.value })} />
+
+            <div className="grid grid-cols-2 gap-4">
+              <Select label="Origine" value={form.origine_type} onChange={(e) => handleOrigineTypeChange(e.target.value)}>
+                {ORIGINES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </Select>
+              {form.origine_type !== "general" && (
+                <Select label="Élément lié" value={form.origine_id} onChange={(e) => setForm({ ...form, origine_id: e.target.value })}>
+                  <option value="">— Non spécifié —</option>
+                  {origineOptionsFor(form.origine_type).map((opt) => (
+                    <option key={opt.id} value={opt.id}>{opt.label}</option>
+                  ))}
+                </Select>
+              )}
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <Select label="Pilote" value={form.pilote_id} onChange={(e) => setForm({ ...form, pilote_id: e.target.value })}>
                 <option value="">— Non assigné —</option>
@@ -152,7 +214,7 @@ export default function ActionPlan() {
               <Input label="Date de l'action" type="date" value={form.action_date} onChange={(e) => setForm({ ...form, action_date: e.target.value })} />
               <Input label="Deadline" type="date" value={form.deadline} onChange={(e) => setForm({ ...form, deadline: e.target.value })} />
             </div>
-            <Textarea label="Notes" rows={3} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+            <Textarea label="Commentaire / note" rows={3} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="secondary" onClick={() => setModalOpen(false)}>Annuler</Button>
               <Button type="submit" disabled={saving}>{saving ? "Enregistrement..." : "Enregistrer"}</Button>
