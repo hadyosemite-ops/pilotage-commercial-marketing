@@ -1,14 +1,21 @@
 import { Router } from "express";
+import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { OAuth2Client } from "google-auth-library";
 import { get, all, run } from "../db.js";
 import { signToken, requireAuth, requireAdmin } from "../middleware/auth.js";
 import { ah } from "../middleware/asyncHandler.js";
+import { sendPasswordResetEmail } from "../lib/email.js";
 
 const router = Router();
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const googleClient = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null;
+
+// URL de base du frontend deploye, pour construire le lien de reinitialisation envoye
+// par email (ex: https://mon-app.vercel.app). A defaut, on retombe sur le serveur
+// de dev Vite local.
+const APP_URL = (process.env.APP_URL || "http://localhost:5173").replace(/\/$/, "");
 
 // Liste blanche des emails autorises a se connecter (outil interne, donnees commerciales
 // sensibles -> pas d'inscription libre). Format : "a@x.com,b@y.com" dans ALLOWED_EMAILS.
@@ -81,6 +88,57 @@ router.post("/google", ah(async (req, res) => {
 
   const token = signToken(user);
   res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
+}));
+
+// Demande de reinitialisation de mot de passe : genere un jeton a duree limitee (1h),
+// envoye par email via Resend. Reponse volontairement identique que l'email existe ou
+// non, pour ne pas reveler quels comptes existent (enumeration).
+router.post("/forgot-password", ah(async (req, res) => {
+  const { email } = req.body || {};
+  if (!email) return res.status(400).json({ error: "Email requis" });
+
+  const genericMessage = { message: "Si un compte existe avec cet email, un lien de reinitialisation vient d'etre envoye." };
+
+  const normalizedEmail = email.toLowerCase().trim();
+  const user = await get("SELECT * FROM users WHERE email = ?", [normalizedEmail]);
+  if (!user) return res.json(genericMessage);
+
+  const rawToken = crypto.randomBytes(32).toString("hex");
+  const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1h
+
+  await run("UPDATE users SET reset_token = ?, reset_token_expires = ? WHERE id = ?", [
+    tokenHash, expiresAt.toISOString(), user.id,
+  ]);
+
+  const resetUrl = `${APP_URL}/reset-password?token=${rawToken}`;
+
+  try {
+    await sendPasswordResetEmail(user.email, resetUrl);
+  } catch (err) {
+    console.error("Erreur envoi email de reinitialisation:", err);
+    return res.status(500).json({ error: "Impossible d'envoyer l'email pour le moment. Reessaie plus tard ou contacte un administrateur." });
+  }
+
+  res.json(genericMessage);
+}));
+
+// Finalise la reinitialisation : verifie le jeton (hash compare, non expire), met a
+// jour le mot de passe et invalide le jeton (usage unique).
+router.post("/reset-password", ah(async (req, res) => {
+  const { token, password } = req.body || {};
+  if (!token || !password) return res.status(400).json({ error: "Jeton et nouveau mot de passe requis" });
+  if (password.length < 8) return res.status(400).json({ error: "Le mot de passe doit contenir au moins 8 caracteres" });
+
+  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+  const user = await get("SELECT * FROM users WHERE reset_token = ? AND reset_token_expires > NOW()", [tokenHash]);
+
+  if (!user) return res.status(400).json({ error: "Lien invalide ou expire. Refais une demande de reinitialisation." });
+
+  const hash = bcrypt.hashSync(password, 10);
+  await run("UPDATE users SET password_hash = ?, reset_token = NULL, reset_token_expires = NULL WHERE id = ?", [hash, user.id]);
+
+  res.json({ ok: true });
 }));
 
 router.get("/me", requireAuth, (req, res) => {

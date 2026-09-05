@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { Input, Button } from "../components/ui.jsx";
 
@@ -41,6 +41,9 @@ export default function Login() {
           <Button type="submit" disabled={loading} className="w-full">
             {loading ? "Connexion..." : "Se connecter"}
           </Button>
+          <p className="text-sm text-center">
+            <Link to="/forgot-password" className="text-accent hover:underline">Mot de passe oublié ?</Link>
+          </p>
         </form>
       </div>
     </div>

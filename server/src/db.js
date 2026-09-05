@@ -63,6 +63,8 @@ export async function initSchema() {
       email TEXT NOT NULL UNIQUE,
       password_hash TEXT NOT NULL,
       role TEXT NOT NULL DEFAULT 'member', -- admin | member
+      reset_token TEXT,
+      reset_token_expires TIMESTAMPTZ,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
@@ -130,9 +132,11 @@ export async function initSchema() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
-    -- Migration douce pour les bases deja creees avant l'ajout de l'origine (2026-09) :
+    -- Migrations douces pour les bases deja creees avant ces ajouts :
     ALTER TABLE action_plan ADD COLUMN IF NOT EXISTS origine_type TEXT NOT NULL DEFAULT 'general';
     ALTER TABLE action_plan ADD COLUMN IF NOT EXISTS origine_id INTEGER;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expires TIMESTAMPTZ;
 
     CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
     CREATE INDEX IF NOT EXISTS idx_opps_stage ON opportunities(stage);
@@ -140,5 +144,6 @@ export async function initSchema() {
     CREATE INDEX IF NOT EXISTS idx_action_plan_status ON action_plan(status);
     CREATE INDEX IF NOT EXISTS idx_action_plan_pilote ON action_plan(pilote_id);
     CREATE INDEX IF NOT EXISTS idx_action_plan_origine ON action_plan(origine_type, origine_id);
+    CREATE INDEX IF NOT EXISTS idx_users_reset_token ON users(reset_token);
   `);
 }
