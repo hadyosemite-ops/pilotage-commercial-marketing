@@ -46,26 +46,36 @@ function dataUriToBuffer(dataUri) {
   }
 }
 
+// Quand un logo est renseigne, il remplace le nom en texte (le logo porte
+// deja le nom de l'entreprise visuellement) : on l'affiche plus grand, et
+// ICE/IF/TP + adresse passent dessous plutot qu'a cote du (petit) logo.
 function drawHeader(doc, { docTitle, numero, statutLabel, company }) {
   const name = company?.raison_sociale || "Smart Industry";
   const logoBuffer = dataUriToBuffer(company?.logo_data);
-  let textX = 50;
+  let hasLogo = false;
   if (logoBuffer) {
     try {
-      doc.image(logoBuffer, 50, 46, { fit: [42, 42] });
-      textX = 100;
+      doc.image(logoBuffer, 50, 44, { fit: [160, 40] });
+      hasLogo = true;
     } catch {
       // image corrompue/non supportee : on continue sans logo plutot que de faire echouer le PDF
     }
   }
-  const textWidth = 300 - (textX - 50);
-  doc.fillColor(NAVY).fontSize(17).font("Helvetica-Bold").text(name, textX, 48, { width: textWidth });
+  const textWidth = 300;
+  let idY = 70;
+  let addresseY = 82;
+  if (hasLogo) {
+    idY = 92;
+    addresseY = 104;
+  } else {
+    doc.fillColor(NAVY).fontSize(17).font("Helvetica-Bold").text(name, 50, 48, { width: textWidth });
+  }
 
   const idLine = [company?.ice && `ICE: ${company.ice}`, company?.identifiant_fiscal && `IF: ${company.identifiant_fiscal}`, company?.tp && `TP: ${company.tp}`]
     .filter(Boolean).join("   ");
-  doc.fillColor(SLATE).fontSize(8).font("Helvetica").text(idLine || "Pilotage Commercial & Marketing", textX, 70, { width: textWidth });
+  doc.fillColor(SLATE).fontSize(8).font("Helvetica").text(idLine || "Pilotage Commercial & Marketing", 50, idY, { width: textWidth });
   if (company?.adresse) {
-    doc.fillColor(SLATE).fontSize(8).font("Helvetica").text(company.adresse, textX, 82, { width: textWidth });
+    doc.fillColor(SLATE).fontSize(8).font("Helvetica").text(company.adresse, 50, addresseY, { width: textWidth });
   }
 
   doc.fillColor(ACCENT).fontSize(16).font("Helvetica-Bold").text(docTitle, 300, 50, { width: 245, align: "right" });
