@@ -27,6 +27,7 @@ export default function Affaires() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   async function load() {
     const { data } = await api.get("/affaires");
@@ -41,24 +42,29 @@ export default function Affaires() {
   function openCreate() {
     setEditing(null);
     setForm(emptyForm);
+    setError("");
     setModalOpen(true);
   }
 
   function openEdit(a) {
     setEditing(a);
     setForm({ ...emptyForm, ...a, client_id: a.client_id || "" });
+    setError("");
     setModalOpen(true);
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
     if (!form.client_id) return;
+    setError("");
     setSaving(true);
     try {
       if (editing) await api.put(`/affaires/${editing.id}`, form);
       else await api.post("/affaires", form);
       setModalOpen(false);
       await load();
+    } catch (err) {
+      setError(err.response?.data?.error || "Impossible d'enregistrer cette affaire.");
     } finally {
       setSaving(false);
     }
@@ -126,6 +132,7 @@ export default function Affaires() {
       {modalOpen && (
         <Modal title={editing ? "Modifier l'affaire" : "Nouvelle affaire"} onClose={() => setModalOpen(false)} wide>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {error && <p className="text-sm text-rose-600">{error}</p>}
             <Input label="Titre" required value={form.titre} onChange={(e) => setForm({ ...form, titre: e.target.value })} />
             <Select label="Client" required value={form.client_id} onChange={(e) => setForm({ ...form, client_id: e.target.value })}>
               <option value="">— Choisir un client —</option>

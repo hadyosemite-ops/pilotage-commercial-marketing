@@ -14,6 +14,7 @@ export default function Clients() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   async function load() {
     const { data } = await api.get("/clients");
@@ -25,23 +26,28 @@ export default function Clients() {
   function openCreate() {
     setEditing(null);
     setForm(emptyForm);
+    setError("");
     setModalOpen(true);
   }
 
   function openEdit(c) {
     setEditing(c);
     setForm({ ...emptyForm, ...c });
+    setError("");
     setModalOpen(true);
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
+    setError("");
     setSaving(true);
     try {
       if (editing) await api.put(`/clients/${editing.id}`, form);
       else await api.post("/clients", form);
       setModalOpen(false);
       await load();
+    } catch (err) {
+      setError(err.response?.data?.error || "Impossible d'enregistrer ce client.");
     } finally {
       setSaving(false);
     }
@@ -106,6 +112,7 @@ export default function Clients() {
       {modalOpen && (
         <Modal title={editing ? "Modifier le client" : "Nouveau client"} onClose={() => setModalOpen(false)} wide>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {error && <p className="text-sm text-rose-600">{error}</p>}
             <Input label="Raison sociale" required value={form.raison_sociale} onChange={(e) => setForm({ ...form, raison_sociale: e.target.value })} />
             <Input label="Adresse" value={form.adresse || ""} onChange={(e) => setForm({ ...form, adresse: e.target.value })} />
             <div className="grid grid-cols-3 gap-4">

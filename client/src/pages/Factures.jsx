@@ -31,6 +31,7 @@ export default function Factures() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   async function load() {
     const params = {};
@@ -45,24 +46,29 @@ export default function Factures() {
   function openCreate() {
     setEditing(null);
     setForm({ ...emptyForm, affaire_id: affaireFilter || "" });
+    setError("");
     setModalOpen(true);
   }
 
   function openEdit(f) {
     setEditing(f);
     setForm({ ...emptyForm, ...f });
+    setError("");
     setModalOpen(true);
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
     if (!form.affaire_id) return;
+    setError("");
     setSaving(true);
     try {
       if (editing) await api.put(`/factures/${editing.id}`, form);
       else await api.post("/factures", form);
       setModalOpen(false);
       await load();
+    } catch (err) {
+      setError(err.response?.data?.error || "Impossible d'enregistrer cette facture.");
     } finally {
       setSaving(false);
     }
@@ -154,6 +160,7 @@ export default function Factures() {
       {modalOpen && (
         <Modal title={editing ? "Modifier la facture" : "Nouvelle facture"} onClose={() => setModalOpen(false)} wide>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {error && <p className="text-sm text-rose-600">{error}</p>}
             <Select label="Affaire" required value={form.affaire_id} onChange={(e) => setForm({ ...form, affaire_id: e.target.value })}>
               <option value="">— Choisir une affaire —</option>
               {affaires.map((a) => <option key={a.id} value={a.id}>{a.numero} — {a.titre}</option>)}

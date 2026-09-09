@@ -29,6 +29,7 @@ export default function Offres() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   async function load() {
     const { data } = await api.get("/offres");
@@ -44,11 +45,13 @@ export default function Offres() {
   function openCreate() {
     setEditing(null);
     setForm(emptyForm);
+    setError("");
     setModalOpen(true);
   }
 
   function openEdit(o) {
     setEditing(o);
+    setError("");
     setForm({
       ...emptyForm,
       ...o,
@@ -75,6 +78,7 @@ export default function Offres() {
   async function handleSubmit(e) {
     e.preventDefault();
     if (!form.client_id) return;
+    setError("");
     setSaving(true);
     try {
       const payload = { ...form, opportunity_id: form.opportunity_id || null, lignes: form.lignes.filter((l) => l.designation) };
@@ -82,6 +86,8 @@ export default function Offres() {
       else await api.post("/offres", payload);
       setModalOpen(false);
       await load();
+    } catch (err) {
+      setError(err.response?.data?.error || "Impossible d'enregistrer cette offre.");
     } finally {
       setSaving(false);
     }
@@ -160,6 +166,7 @@ export default function Offres() {
       {modalOpen && (
         <Modal title={editing ? "Modifier l'offre" : "Nouvelle offre"} onClose={() => setModalOpen(false)} wide>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {error && <p className="text-sm text-rose-600">{error}</p>}
             <Select label="Client" required value={form.client_id} onChange={(e) => setForm({ ...form, client_id: e.target.value })}>
               <option value="">— Choisir un client —</option>
               {clients.map((c) => <option key={c.id} value={c.id}>{c.raison_sociale}</option>)}
