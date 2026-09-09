@@ -1,13 +1,36 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Megaphone, Users, GitBranch, ListChecks, LogOut, Settings2 } from "lucide-react";
+import {
+  LayoutDashboard, Megaphone, Users, GitBranch, ListChecks, LogOut, Settings2,
+  FileText, Briefcase, Receipt,
+} from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 
-const navItems = [
-  { to: "/", label: "Tableau de bord", icon: LayoutDashboard, end: true },
-  { to: "/plan-action", label: "Plan d'action", icon: ListChecks },
-  { to: "/marketing", label: "Marketing", icon: Megaphone },
-  { to: "/leads", label: "Leads", icon: Users },
-  { to: "/pipeline", label: "Pipeline", icon: GitBranch },
+// La sidebar est organisee en sections pour rester lisible avec les modules
+// Offres / Affaires / Facturation en plus de la prospection.
+const navSections = [
+  {
+    label: "Pilotage",
+    items: [
+      { to: "/", label: "Tableau de bord", icon: LayoutDashboard, end: true },
+      { to: "/plan-action", label: "Plan d'action", icon: ListChecks },
+    ],
+  },
+  {
+    label: "Prospection",
+    items: [
+      { to: "/marketing", label: "Marketing", icon: Megaphone },
+      { to: "/leads", label: "Leads", icon: Users },
+      { to: "/pipeline", label: "Pipeline", icon: GitBranch },
+    ],
+  },
+  {
+    label: "Ventes",
+    items: [
+      { to: "/offres", label: "Offres", icon: FileText },
+      { to: "/affaires", label: "Affaires", icon: Briefcase },
+      { to: "/factures", label: "Facturation", icon: Receipt },
+    ],
+  },
 ];
 
 export default function Layout() {
@@ -29,34 +52,44 @@ export default function Layout() {
             <p className="text-base font-bold leading-tight">Pilotage Commercial &amp; Marketing</p>
           </div>
         </div>
-        <nav className="flex-1 px-3 py-4 space-y-1">
-          {navItems.map(({ to, label, icon: Icon, end }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  isActive ? "bg-accent text-white" : "text-slate-300 hover:bg-white/10 hover:text-white"
-                }`
-              }
-            >
-              <Icon size={18} />
-              {label}
-            </NavLink>
+        <nav className="flex-1 px-3 py-4 space-y-4 overflow-y-auto">
+          {navSections.map((section) => (
+            <div key={section.label}>
+              <p className="px-3 mb-1 text-[11px] font-semibold tracking-wider text-slate-500 uppercase">{section.label}</p>
+              <div className="space-y-1">
+                {section.items.map(({ to, label, icon: Icon, end }) => (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    end={end}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                        isActive ? "bg-accent text-white" : "text-slate-300 hover:bg-white/10 hover:text-white"
+                      }`
+                    }
+                  >
+                    <Icon size={18} />
+                    {label}
+                  </NavLink>
+                ))}
+              </div>
+            </div>
           ))}
           {user?.role === "admin" && (
-            <NavLink
-              to="/equipe"
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  isActive ? "bg-accent text-white" : "text-slate-300 hover:bg-white/10 hover:text-white"
-                }`
-              }
-            >
-              <Settings2 size={18} />
-              Equipe
-            </NavLink>
+            <div>
+              <p className="px-3 mb-1 text-[11px] font-semibold tracking-wider text-slate-500 uppercase">Administration</p>
+              <NavLink
+                to="/equipe"
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                    isActive ? "bg-accent text-white" : "text-slate-300 hover:bg-white/10 hover:text-white"
+                  }`
+                }
+              >
+                <Settings2 size={18} />
+                Equipe
+              </NavLink>
+            </div>
           )}
         </nav>
         <div className="px-5 py-4 border-t border-white/10">

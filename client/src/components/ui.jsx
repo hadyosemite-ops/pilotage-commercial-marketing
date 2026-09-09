@@ -51,6 +51,17 @@ const badgeStyles = {
   LinkedIn: "bg-blue-100 text-blue-800",
   Instagram: "bg-pink-100 text-pink-800",
   Autre: "bg-slate-100 text-slate-700",
+  // Offres / Affaires / Facturation
+  brouillon: "bg-slate-100 text-slate-600",
+  envoye: "bg-blue-100 text-blue-800",
+  envoyee: "bg-blue-100 text-blue-800",
+  accepte: "bg-emerald-100 text-emerald-800",
+  refuse: "bg-rose-100 text-rose-700",
+  expire: "bg-amber-100 text-amber-800",
+  terminee: "bg-emerald-100 text-emerald-800",
+  annulee: "bg-rose-100 text-rose-700",
+  payee: "bg-emerald-100 text-emerald-800",
+  en_retard: "bg-rose-100 text-rose-700",
 };
 
 export function Badge({ value, label }) {

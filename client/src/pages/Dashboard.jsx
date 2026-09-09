@@ -50,6 +50,13 @@ export default function Dashboard() {
         <StatCard label="Taux de gain" value={`${data.winRate}%`} sub="opportunités closes" />
       </div>
 
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+        <StatCard label="CA facturé (payé)" value={formatMAD(data.ventes.caFacture.v)} sub="factures réglées" highlight />
+        <StatCard label="Affaires en cours" value={formatMAD(data.ventes.affairesEnCours.v)} sub={`${data.ventes.affairesEnCours.c} affaire(s)`} />
+        <StatCard label="Devis en attente" value={formatMAD(data.ventes.offresEnAttente.v)} sub={`${data.ventes.offresEnAttente.c} offre(s) envoyée(s)`} />
+        <StatCard label="Factures en retard" value={data.ventes.facturesEnRetard.c} sub={formatMAD(data.ventes.facturesEnRetard.v)} />
+      </div>
+
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-6">
         <Card className="p-5 xl:col-span-2">
           <h3 className="font-semibold text-slate-800 mb-4">Valeur du pipeline par étape</h3>

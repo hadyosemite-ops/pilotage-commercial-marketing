@@ -33,6 +33,21 @@ export async function all(sql, args = []) {
   return res.rows;
 }
 
+// Genere un numero sequentiel par annee et par module (ex: DEV-2026-0001).
+// Le prefixe/table viennent d'une liste fixe cote code (jamais de l'utilisateur),
+// donc l'interpolation directe du nom de table dans le SQL est sans risque.
+export async function nextNumero(prefix, table) {
+  const year = new Date().getFullYear();
+  const like = `${prefix}-${year}-%`;
+  const row = await get(`SELECT numero FROM ${table} WHERE numero LIKE ? ORDER BY numero DESC LIMIT 1`, [like]);
+  let seq = 1;
+  if (row?.numero) {
+    const last = parseInt(row.numero.split("-")[2], 10);
+    if (Number.isFinite(last)) seq = last + 1;
+  }
+  return `${prefix}-${year}-${String(seq).padStart(4, "0")}`;
+}
+
 // Transaction manuelle (utilisee pour l'import CSV de leads) : un client dedie
 // avec BEGIN/COMMIT/ROLLBACK explicites.
 export async function withTransaction(fn) {
@@ -132,6 +147,74 @@ export async function initSchema() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
+    -- Offres (devis) : peuvent naitre d'une opportunite gagnee, contiennent des lignes,
+    -- et donnent naissance a une Affaire une fois acceptees.
+    CREATE TABLE IF NOT EXISTS offres (
+      id SERIAL PRIMARY KEY,
+      numero TEXT NOT NULL UNIQUE,
+      opportunity_id INTEGER REFERENCES opportunities(id) ON DELETE SET NULL,
+      affaire_id INTEGER,
+      client_nom TEXT NOT NULL,
+      client_societe TEXT,
+      objet TEXT NOT NULL,
+      statut TEXT NOT NULL DEFAULT 'brouillon', -- brouillon | envoye | accepte | refuse | expire
+      date_emission TEXT,
+      date_validite TEXT,
+      taux_tva REAL NOT NULL DEFAULT 20,
+      notes TEXT,
+      owner_id INTEGER REFERENCES users(id),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS offre_lignes (
+      id SERIAL PRIMARY KEY,
+      offre_id INTEGER NOT NULL REFERENCES offres(id) ON DELETE CASCADE,
+      designation TEXT NOT NULL,
+      quantite REAL NOT NULL DEFAULT 1,
+      prix_unitaire_ht REAL NOT NULL DEFAULT 0,
+      ordre INTEGER NOT NULL DEFAULT 0
+    );
+
+    -- Affaires : le projet/contrat en cours de realisation, une fois le devis accepte.
+    -- Peut aussi etre creee manuellement (sans offre prealable).
+    CREATE TABLE IF NOT EXISTS affaires (
+      id SERIAL PRIMARY KEY,
+      numero TEXT NOT NULL UNIQUE,
+      offre_id INTEGER REFERENCES offres(id) ON DELETE SET NULL,
+      opportunity_id INTEGER REFERENCES opportunities(id) ON DELETE SET NULL,
+      titre TEXT NOT NULL,
+      client_nom TEXT NOT NULL,
+      client_societe TEXT,
+      montant_ht REAL NOT NULL DEFAULT 0,
+      taux_tva REAL NOT NULL DEFAULT 20,
+      statut TEXT NOT NULL DEFAULT 'en_cours', -- en_cours | terminee | annulee
+      date_debut TEXT,
+      date_fin_prevue TEXT,
+      notes TEXT,
+      owner_id INTEGER REFERENCES users(id),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    -- Factures : une affaire peut avoir plusieurs factures (acompte, tranches, solde).
+    CREATE TABLE IF NOT EXISTS factures (
+      id SERIAL PRIMARY KEY,
+      numero TEXT NOT NULL UNIQUE,
+      affaire_id INTEGER NOT NULL REFERENCES affaires(id) ON DELETE CASCADE,
+      objet TEXT NOT NULL, -- ex: "Acompte 30%", "Solde"
+      montant_ht REAL NOT NULL DEFAULT 0,
+      taux_tva REAL NOT NULL DEFAULT 20,
+      statut TEXT NOT NULL DEFAULT 'brouillon', -- brouillon | envoyee | payee | en_retard | annulee
+      date_emission TEXT,
+      date_echeance TEXT,
+      date_paiement TEXT,
+      notes TEXT,
+      owner_id INTEGER REFERENCES users(id),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
     -- Migrations douces pour les bases deja creees avant ces ajouts :
     ALTER TABLE action_plan ADD COLUMN IF NOT EXISTS origine_type TEXT NOT NULL DEFAULT 'general';
     ALTER TABLE action_plan ADD COLUMN IF NOT EXISTS origine_id INTEGER;
@@ -145,5 +228,12 @@ export async function initSchema() {
     CREATE INDEX IF NOT EXISTS idx_action_plan_pilote ON action_plan(pilote_id);
     CREATE INDEX IF NOT EXISTS idx_action_plan_origine ON action_plan(origine_type, origine_id);
     CREATE INDEX IF NOT EXISTS idx_users_reset_token ON users(reset_token);
+    CREATE INDEX IF NOT EXISTS idx_offres_statut ON offres(statut);
+    CREATE INDEX IF NOT EXISTS idx_offres_opportunity ON offres(opportunity_id);
+    CREATE INDEX IF NOT EXISTS idx_offre_lignes_offre ON offre_lignes(offre_id);
+    CREATE INDEX IF NOT EXISTS idx_affaires_statut ON affaires(statut);
+    CREATE INDEX IF NOT EXISTS idx_affaires_offre ON affaires(offre_id);
+    CREATE INDEX IF NOT EXISTS idx_factures_affaire ON factures(affaire_id);
+    CREATE INDEX IF NOT EXISTS idx_factures_statut ON factures(statut);
   `);
 }

@@ -7,6 +7,9 @@ import leadsRoutes from "./routes/leads.js";
 import opportunitiesRoutes from "./routes/opportunities.js";
 import dashboardRoutes from "./routes/dashboard.js";
 import actionPlanRoutes from "./routes/actionPlan.js";
+import offresRoutes from "./routes/offres.js";
+import affairesRoutes from "./routes/affaires.js";
+import facturesRoutes from "./routes/factures.js";
 
 // Construit l'app Express (routes API uniquement, pas de fichiers statiques,
 // pas d'ecoute de port) : reutilisable telle quelle en local (index.js) et
@@ -24,6 +27,9 @@ export function createApp() {
   app.use("/api/opportunities", opportunitiesRoutes);
   app.use("/api/dashboard", dashboardRoutes);
   app.use("/api/action-plan", actionPlanRoutes);
+  app.use("/api/offres", offresRoutes);
+  app.use("/api/affaires", affairesRoutes);
+  app.use("/api/factures", facturesRoutes);
 
   app.use((err, req, res, next) => {
     console.error(err);
