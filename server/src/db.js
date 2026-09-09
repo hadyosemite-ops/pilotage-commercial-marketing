@@ -280,6 +280,17 @@ export async function initSchema() {
     ALTER TABLE affaires ADD COLUMN IF NOT EXISTS client_identifiant_fiscal TEXT;
     ALTER TABLE affaires ADD COLUMN IF NOT EXISTS client_rc TEXT;
 
+    -- offres/affaires ont ete crees initialement avec client_nom (NOT NULL) et
+    -- client_societe, avant l'introduction du module Clients (client_id + photo).
+    -- CREATE TABLE IF NOT EXISTS ne retouche pas une table deja existante : sur
+    -- une base ou ces tables existaient deja, l'ancienne colonne client_nom
+    -- reste NOT NULL alors que l'INSERT actuel ne la renseigne plus, ce qui
+    -- provoque une erreur "null value in column client_nom" a chaque creation.
+    ALTER TABLE offres DROP COLUMN IF EXISTS client_nom;
+    ALTER TABLE offres DROP COLUMN IF EXISTS client_societe;
+    ALTER TABLE affaires DROP COLUMN IF EXISTS client_nom;
+    ALTER TABLE affaires DROP COLUMN IF EXISTS client_societe;
+
     CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
     CREATE INDEX IF NOT EXISTS idx_clients_raison_sociale ON clients(raison_sociale);
     CREATE INDEX IF NOT EXISTS idx_offres_client ON offres(client_id);
