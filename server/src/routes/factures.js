@@ -72,7 +72,8 @@ router.get("/:id/pdf", ah(async (req, res) => {
   const facture = await get("SELECT * FROM factures WHERE id = ?", [req.params.id]);
   if (!facture) return res.status(404).json({ error: "Facture introuvable" });
   const affaire = await get("SELECT * FROM affaires WHERE id = ?", [facture.affaire_id]);
-  const buffer = await generateFacturePdf(facture, affaire);
+  const company = await get("SELECT * FROM company_settings WHERE id = 1");
+  const buffer = await generateFacturePdf(facture, affaire, company);
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader("Content-Disposition", `inline; filename="${facture.numero}.pdf"`);
   res.send(buffer);

@@ -27,9 +27,40 @@ const NAVY = "#0D1B2A";
 const ACCENT = "#0F7173";
 const SLATE = "#475569";
 
-function drawHeader(doc, { docTitle, numero, statutLabel }) {
-  doc.fillColor(NAVY).fontSize(20).font("Helvetica-Bold").text("Smart Industry", 50, 50);
-  doc.fillColor(SLATE).fontSize(9).font("Helvetica").text("Pilotage Commercial & Marketing", 50, 74);
+// Convertit une data URI ("data:image/png;base64,...") en Buffer utilisable par
+// pdfkit. Retourne null si absente/invalide (l'appelant ignore alors l'image).
+function dataUriToBuffer(dataUri) {
+  if (!dataUri) return null;
+  const idx = dataUri.indexOf("base64,");
+  if (idx === -1) return null;
+  try {
+    return Buffer.from(dataUri.slice(idx + 7), "base64");
+  } catch {
+    return null;
+  }
+}
+
+function drawHeader(doc, { docTitle, numero, statutLabel, company }) {
+  const name = company?.raison_sociale || "Smart Industry";
+  const logoBuffer = dataUriToBuffer(company?.logo_data);
+  let textX = 50;
+  if (logoBuffer) {
+    try {
+      doc.image(logoBuffer, 50, 46, { fit: [42, 42] });
+      textX = 100;
+    } catch {
+      // image corrompue/non supportee : on continue sans logo plutot que de faire echouer le PDF
+    }
+  }
+  const textWidth = 300 - (textX - 50);
+  doc.fillColor(NAVY).fontSize(17).font("Helvetica-Bold").text(name, textX, 48, { width: textWidth });
+
+  const idLine = [company?.ice && `ICE: ${company.ice}`, company?.identifiant_fiscal && `IF: ${company.identifiant_fiscal}`, company?.rc && `RC: ${company.rc}`]
+    .filter(Boolean).join("   ");
+  doc.fillColor(SLATE).fontSize(8).font("Helvetica").text(idLine || "Pilotage Commercial & Marketing", textX, 70, { width: textWidth });
+  if (company?.adresse) {
+    doc.fillColor(SLATE).fontSize(8).font("Helvetica").text(company.adresse, textX, 82, { width: textWidth });
+  }
 
   doc.fillColor(ACCENT).fontSize(16).font("Helvetica-Bold").text(docTitle, 300, 50, { width: 245, align: "right" });
   doc.fillColor(SLATE).fontSize(10).font("Helvetica").text(numero, 300, 72, { width: 245, align: "right" });
@@ -37,7 +68,28 @@ function drawHeader(doc, { docTitle, numero, statutLabel }) {
     doc.fillColor(SLATE).fontSize(9).text(statutLabel, 300, 88, { width: 245, align: "right" });
   }
 
-  doc.moveTo(50, 110).lineTo(545, 110).strokeColor("#e2e8f0").lineWidth(1).stroke();
+  doc.moveTo(50, 118).lineTo(545, 118).strokeColor("#e2e8f0").lineWidth(1).stroke();
+}
+
+// Bloc cachet + signature, position fixe en bas de page (comme drawFooter) :
+// coherent avec le fait que ces documents restent sur une seule page.
+function drawSignatureBlock(doc, company) {
+  const x = 350, y = 635, w = 195, h = 85;
+  doc.fillColor(SLATE).fontSize(8).font("Helvetica-Bold").text("CACHET & SIGNATURE", x, y - 14);
+  doc.roundedRect(x, y, w, h, 4).strokeColor("#e2e8f0").lineWidth(1).stroke();
+
+  const cachetBuffer = dataUriToBuffer(company?.cachet_data);
+  const signatureBuffer = dataUriToBuffer(company?.signature_data);
+  try {
+    if (cachetBuffer) doc.image(cachetBuffer, x + 8, y + 8, { fit: [85, h - 16] });
+  } catch {
+    // image cachet illisible : on laisse la case vide plutot que de bloquer le PDF
+  }
+  try {
+    if (signatureBuffer) doc.image(signatureBuffer, x + 100, y + 8, { fit: [87, h - 16] });
+  } catch {
+    // idem pour la signature
+  }
 }
 
 function drawClientBlock(doc, y, { raisonSociale, adresse, ice, identifiantFiscal, rc, dateEmission, dateAutre, dateAutreLabel }) {
@@ -82,8 +134,9 @@ function drawFooter(doc, notes) {
   doc.fontSize(8).fillColor("#94a3b8").font("Helvetica")
     .text("Document genere par Pilotage Commercial & Marketing — Smart Industry", 50, 760, { width: 495, align: "center" });
   if (notes) {
-    doc.fontSize(9).fillColor(SLATE).font("Helvetica-Bold").text("Notes", 50, 700);
-    doc.fontSize(9).fillColor(SLATE).font("Helvetica").text(notes, 50, 714, { width: 495 });
+    // Largeur limitee a la colonne de gauche pour ne pas passer sous le bloc cachet/signature.
+    doc.fontSize(9).fillColor(SLATE).font("Helvetica-Bold").text("Notes", 50, 635);
+    doc.fontSize(9).fillColor(SLATE).font("Helvetica").text(notes, 50, 649, { width: 280 });
   }
 }
 
@@ -95,14 +148,14 @@ const OFFRE_STATUT_LABELS = {
   expire: "Expiré",
 };
 
-export async function generateOffrePdf(offre, lignes) {
+export async function generateOffrePdf(offre, lignes, company) {
   const montantHt = lignes.reduce((s, l) => s + Number(l.quantite || 0) * Number(l.prix_unitaire_ht || 0), 0);
   const tauxTva = Number(offre.taux_tva) || 0;
   const montantTva = montantHt * (tauxTva / 100);
   const montantTtc = montantHt + montantTva;
 
   return renderToBuffer((doc) => {
-    drawHeader(doc, { docTitle: "DEVIS", numero: offre.numero, statutLabel: OFFRE_STATUT_LABELS[offre.statut] });
+    drawHeader(doc, { docTitle: "DEVIS", numero: offre.numero, statutLabel: OFFRE_STATUT_LABELS[offre.statut], company });
     let y = drawClientBlock(doc, 130, {
       raisonSociale: offre.client_raison_sociale,
       adresse: offre.client_adresse,
@@ -141,6 +194,7 @@ export async function generateOffrePdf(offre, lignes) {
     y += 20;
 
     drawTotals(doc, y, { montantHt, tauxTva, montantTva, montantTtc });
+    drawSignatureBlock(doc, company);
     drawFooter(doc, offre.notes);
   });
 }
@@ -153,14 +207,14 @@ const FACTURE_STATUT_LABELS = {
   annulee: "Annulée",
 };
 
-export async function generateFacturePdf(facture, affaire) {
+export async function generateFacturePdf(facture, affaire, company) {
   const montantHt = Number(facture.montant_ht) || 0;
   const tauxTva = Number(facture.taux_tva) || 0;
   const montantTva = montantHt * (tauxTva / 100);
   const montantTtc = montantHt + montantTva;
 
   return renderToBuffer((doc) => {
-    drawHeader(doc, { docTitle: "FACTURE", numero: facture.numero, statutLabel: FACTURE_STATUT_LABELS[facture.statut] });
+    drawHeader(doc, { docTitle: "FACTURE", numero: facture.numero, statutLabel: FACTURE_STATUT_LABELS[facture.statut], company });
     let y = drawClientBlock(doc, 130, {
       raisonSociale: affaire?.client_raison_sociale,
       adresse: affaire?.client_adresse,
@@ -190,6 +244,7 @@ export async function generateFacturePdf(facture, affaire) {
     y += 20;
 
     drawTotals(doc, y, { montantHt, tauxTva, montantTva, montantTtc });
+    drawSignatureBlock(doc, company);
     drawFooter(doc, facture.notes);
   });
 }

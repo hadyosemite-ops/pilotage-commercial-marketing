@@ -140,7 +140,8 @@ router.post("/:id/accepter", ah(async (req, res) => {
 router.get("/:id/pdf", ah(async (req, res) => {
   const offre = await withLignes(await get("SELECT * FROM offres WHERE id = ?", [req.params.id]));
   if (!offre) return res.status(404).json({ error: "Offre introuvable" });
-  const buffer = await generateOffrePdf(offre, offre.lignes);
+  const company = await get("SELECT * FROM company_settings WHERE id = 1");
+  const buffer = await generateOffrePdf(offre, offre.lignes, company);
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader("Content-Disposition", `inline; filename="${offre.numero}.pdf"`);
   res.send(buffer);

@@ -8,6 +8,7 @@ import opportunitiesRoutes from "./routes/opportunities.js";
 import dashboardRoutes from "./routes/dashboard.js";
 import actionPlanRoutes from "./routes/actionPlan.js";
 import clientsRoutes from "./routes/clients.js";
+import companySettingsRoutes from "./routes/companySettings.js";
 import offresRoutes from "./routes/offres.js";
 import affairesRoutes from "./routes/affaires.js";
 import facturesRoutes from "./routes/factures.js";
@@ -29,6 +30,7 @@ export function createApp() {
   app.use("/api/dashboard", dashboardRoutes);
   app.use("/api/action-plan", actionPlanRoutes);
   app.use("/api/clients", clientsRoutes);
+  app.use("/api/company-settings", companySettingsRoutes);
   app.use("/api/offres", offresRoutes);
   app.use("/api/affaires", affairesRoutes);
   app.use("/api/factures", facturesRoutes);

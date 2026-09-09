@@ -14,6 +14,7 @@ import Offres from "./pages/Offres.jsx";
 import Affaires from "./pages/Affaires.jsx";
 import Factures from "./pages/Factures.jsx";
 import Team from "./pages/Team.jsx";
+import Entreprise from "./pages/Entreprise.jsx";
 
 function RequireAuth({ children }) {
   const { user } = useAuth();
@@ -45,6 +46,7 @@ export default function App() {
         <Route path="affaires" element={<Affaires />} />
         <Route path="factures" element={<Factures />} />
         <Route path="equipe" element={<Team />} />
+        <Route path="entreprise" element={<Entreprise />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

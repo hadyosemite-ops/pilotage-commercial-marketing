@@ -1,7 +1,7 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Megaphone, Users, GitBranch, ListChecks, LogOut, Settings2,
-  FileText, Briefcase, Receipt, Building2,
+  FileText, Briefcase, Receipt, Building2, Landmark,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 
@@ -79,17 +79,25 @@ export default function Layout() {
           {user?.role === "admin" && (
             <div>
               <p className="px-3 mb-1 text-[11px] font-semibold tracking-wider text-slate-500 uppercase">Administration</p>
-              <NavLink
-                to="/equipe"
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                    isActive ? "bg-accent text-white" : "text-slate-300 hover:bg-white/10 hover:text-white"
-                  }`
-                }
-              >
-                <Settings2 size={18} />
-                Equipe
-              </NavLink>
+              <div className="space-y-1">
+                {[
+                  { to: "/entreprise", label: "Mon entreprise", icon: Landmark },
+                  { to: "/equipe", label: "Equipe", icon: Settings2 },
+                ].map(({ to, label, icon: Icon }) => (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                        isActive ? "bg-accent text-white" : "text-slate-300 hover:bg-white/10 hover:text-white"
+                      }`
+                    }
+                  >
+                    <Icon size={18} />
+                    {label}
+                  </NavLink>
+                ))}
+              </div>
             </div>
           )}
         </nav>

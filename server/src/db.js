@@ -242,6 +242,26 @@ export async function initSchema() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
+    -- Informations de l'entreprise emettrice (identite officielle sur les devis/factures).
+    -- Ligne unique (id = 1) : GET cree la ligne par defaut si elle n'existe pas encore.
+    -- Logo/cachet/signature stockes en base64 (data URI) directement en base, pas de
+    -- stockage fichier externe a configurer (coherent avec l'architecture "tout Postgres").
+    CREATE TABLE IF NOT EXISTS company_settings (
+      id INTEGER PRIMARY KEY DEFAULT 1,
+      raison_sociale TEXT NOT NULL DEFAULT 'Smart Industry',
+      adresse TEXT,
+      ice TEXT,
+      identifiant_fiscal TEXT,
+      rc TEXT,
+      telephone TEXT,
+      email TEXT,
+      logo_data TEXT,
+      cachet_data TEXT,
+      signature_data TEXT,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      CONSTRAINT company_settings_singleton CHECK (id = 1)
+    );
+
     -- Migrations douces pour les bases deja creees avant ces ajouts :
     ALTER TABLE action_plan ADD COLUMN IF NOT EXISTS origine_type TEXT NOT NULL DEFAULT 'general';
     ALTER TABLE action_plan ADD COLUMN IF NOT EXISTS origine_id INTEGER;
