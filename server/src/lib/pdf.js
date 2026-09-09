@@ -55,7 +55,7 @@ function drawHeader(doc, { docTitle, numero, statutLabel, company }) {
   const textWidth = 300 - (textX - 50);
   doc.fillColor(NAVY).fontSize(17).font("Helvetica-Bold").text(name, textX, 48, { width: textWidth });
 
-  const idLine = [company?.ice && `ICE: ${company.ice}`, company?.identifiant_fiscal && `IF: ${company.identifiant_fiscal}`, company?.rc && `RC: ${company.rc}`]
+  const idLine = [company?.ice && `ICE: ${company.ice}`, company?.identifiant_fiscal && `IF: ${company.identifiant_fiscal}`, company?.tp && `TP: ${company.tp}`]
     .filter(Boolean).join("   ");
   doc.fillColor(SLATE).fontSize(8).font("Helvetica").text(idLine || "Pilotage Commercial & Marketing", textX, 70, { width: textWidth });
   if (company?.adresse) {

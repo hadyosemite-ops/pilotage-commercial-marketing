@@ -26,14 +26,14 @@ router.get("/", ah(async (req, res) => {
 }));
 
 router.put("/", requireAdmin, ah(async (req, res) => {
-  const { raison_sociale, adresse, ice, identifiant_fiscal, rc, telephone, email } = req.body || {};
+  const { raison_sociale, adresse, ice, identifiant_fiscal, tp, telephone, email } = req.body || {};
   if (!raison_sociale) return res.status(400).json({ error: "Raison sociale requise" });
 
   await ensureRow();
   await run(`
-    UPDATE company_settings SET raison_sociale=?, adresse=?, ice=?, identifiant_fiscal=?, rc=?, telephone=?, email=?, updated_at=NOW()
+    UPDATE company_settings SET raison_sociale=?, adresse=?, ice=?, identifiant_fiscal=?, tp=?, telephone=?, email=?, updated_at=NOW()
     WHERE id = 1
-  `, [raison_sociale, adresse || null, ice || null, identifiant_fiscal || null, rc || null, telephone || null, email || null]);
+  `, [raison_sociale, adresse || null, ice || null, identifiant_fiscal || null, tp || null, telephone || null, email || null]);
 
   res.json(await get("SELECT * FROM company_settings WHERE id = 1"));
 }));

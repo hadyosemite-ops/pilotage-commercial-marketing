@@ -252,7 +252,7 @@ export async function initSchema() {
       adresse TEXT,
       ice TEXT,
       identifiant_fiscal TEXT,
-      rc TEXT,
+      tp TEXT,
       telephone TEXT,
       email TEXT,
       logo_data TEXT,
@@ -290,6 +290,21 @@ export async function initSchema() {
     ALTER TABLE offres DROP COLUMN IF EXISTS client_societe;
     ALTER TABLE affaires DROP COLUMN IF EXISTS client_nom;
     ALTER TABLE affaires DROP COLUMN IF EXISTS client_societe;
+
+    -- company_settings a d'abord ete cree avec une colonne "rc" (Registre de
+    -- Commerce), remplacee par "tp" (Taxe Professionnelle) a la demande de
+    -- hussein : c'est cette identite qui doit apparaitre pour NOTRE entreprise
+    -- (le RC du client, lui, reste inchange sur les devis/factures). On
+    -- renomme la colonne si elle existe encore (base deja deployee), sinon
+    -- la table a deja ete creee directement avec "tp" ci-dessus.
+    DO $$
+    BEGIN
+      IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'company_settings' AND column_name = 'rc')
+         AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'company_settings' AND column_name = 'tp') THEN
+        ALTER TABLE company_settings RENAME COLUMN rc TO tp;
+      END IF;
+    END $$;
+    ALTER TABLE company_settings ADD COLUMN IF NOT EXISTS tp TEXT;
 
     CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
     CREATE INDEX IF NOT EXISTS idx_clients_raison_sociale ON clients(raison_sociale);

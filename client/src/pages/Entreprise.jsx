@@ -3,7 +3,7 @@ import { Upload } from "lucide-react";
 import api from "../api.js";
 import { PageHeader, Card, Button, Input } from "../components/ui.jsx";
 
-const emptyForm = { raison_sociale: "", adresse: "", ice: "", identifiant_fiscal: "", rc: "", telephone: "", email: "" };
+const emptyForm = { raison_sociale: "", adresse: "", ice: "", identifiant_fiscal: "", tp: "", telephone: "", email: "" };
 
 export default function Entreprise() {
   const [company, setCompany] = useState(null);
@@ -20,7 +20,7 @@ export default function Entreprise() {
       adresse: data.adresse || "",
       ice: data.ice || "",
       identifiant_fiscal: data.identifiant_fiscal || "",
-      rc: data.rc || "",
+      tp: data.tp || "",
       telephone: data.telephone || "",
       email: data.email || "",
     });
@@ -78,7 +78,7 @@ export default function Entreprise() {
             <div className="grid grid-cols-3 gap-4">
               <Input label="ICE" value={form.ice} onChange={(e) => setForm({ ...form, ice: e.target.value })} />
               <Input label="IF" value={form.identifiant_fiscal} onChange={(e) => setForm({ ...form, identifiant_fiscal: e.target.value })} />
-              <Input label="RC" value={form.rc} onChange={(e) => setForm({ ...form, rc: e.target.value })} />
+              <Input label="TP" value={form.tp} onChange={(e) => setForm({ ...form, tp: e.target.value })} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <Input label="Téléphone" value={form.telephone} onChange={(e) => setForm({ ...form, telephone: e.target.value })} />
