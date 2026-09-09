@@ -139,7 +139,7 @@ function drawClientBlock(doc, y, { raisonSociale, adresse, ice, identifiantFisca
     rightBottom = y + 64;
   }
 
-  return Math.max(leftBottom, rightBottom) + 36;
+  return Math.max(leftBottom, rightBottom) + 54;
 }
 
 function drawTotals(doc, y, { montantHt, tauxTva, montantTva, montantTtc }) {
@@ -185,10 +185,12 @@ function drawFooter(doc, company) {
   if (!lines.length) return;
 
   doc.fontSize(8).fillColor("#94a3b8").font("Helvetica");
-  let y = 745;
+  // Ancre plus bas (pres du bord inferieur de la page) : les lignes remontent
+  // depuis le bas plutot que de partir d'un point fixe en haut du pied de page.
+  let y = 792 - lines.length * 10;
   lines.forEach((line) => {
     doc.text(line, 50, y, { width: 495, align: "center" });
-    y += 11;
+    y += 10;
   });
 }
 
@@ -208,7 +210,7 @@ export async function generateOffrePdf(offre, lignes, company) {
 
   return renderToBuffer((doc) => {
     drawHeader(doc, { docTitle: "OFFRE", numero: offre.numero, statutLabel: OFFRE_STATUT_LABELS[offre.statut], company });
-    let y = drawClientBlock(doc, 130, {
+    let y = drawClientBlock(doc, 132, {
       raisonSociale: offre.client_raison_sociale,
       adresse: offre.client_adresse,
       ice: offre.client_ice,
@@ -272,7 +274,7 @@ export async function generateFacturePdf(facture, affaire, company) {
 
   return renderToBuffer((doc) => {
     drawHeader(doc, { docTitle: "FACTURE", numero: facture.numero, statutLabel: FACTURE_STATUT_LABELS[facture.statut], company });
-    let y = drawClientBlock(doc, 130, {
+    let y = drawClientBlock(doc, 132, {
       raisonSociale: affaire?.client_raison_sociale,
       adresse: affaire?.client_adresse,
       ice: affaire?.client_ice,
