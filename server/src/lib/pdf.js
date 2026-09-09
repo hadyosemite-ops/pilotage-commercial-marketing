@@ -18,9 +18,15 @@ function renderToBuffer(build) {
   });
 }
 
+// Formatage manuel (espace ASCII normal comme separateur de milliers) plutot que
+// toLocaleString("fr-FR") : cette derniere insere une espace fine insecable
+// (U+202F) que la police Helvetica standard des PDF ne sait pas afficher
+// correctement (elle apparaissait comme un "/" dans le PDF genere).
 function formatMAD(v) {
   const n = Number(v) || 0;
-  return `${n.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MAD`;
+  const [intPart, decPart] = n.toFixed(2).split(".");
+  const withSpaces = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  return `${withSpaces},${decPart} MAD`;
 }
 
 const NAVY = "#0D1B2A";
@@ -92,27 +98,39 @@ function drawSignatureBlock(doc, company) {
   }
 }
 
+// Hauteur/position calculees dynamiquement (plutot que des decalages fixes) :
+// une adresse client qui passe sur 2 lignes ne doit pas chevaucher la ligne
+// ICE/IF/RC juste en dessous, ni le contenu qui suit le bloc (objet/lignes).
 function drawClientBlock(doc, y, { raisonSociale, adresse, ice, identifiantFiscal, rc, dateEmission, dateAutre, dateAutreLabel }) {
+  const colWidth = 270;
   doc.fillColor(SLATE).fontSize(9).font("Helvetica-Bold").text("CLIENT", 50, y);
   doc.fillColor(NAVY).fontSize(11).font("Helvetica-Bold").text(raisonSociale || "—", 50, y + 14);
-  let localY = y + 30;
+  let localY = y + 32;
   if (adresse) {
-    doc.fillColor(SLATE).fontSize(9).font("Helvetica").text(adresse, 50, localY, { width: 270 });
-    localY += 13;
+    doc.fillColor(SLATE).fontSize(9).font("Helvetica");
+    const addrHeight = doc.heightOfString(adresse, { width: colWidth });
+    doc.text(adresse, 50, localY, { width: colWidth });
+    localY += addrHeight + 4;
   }
   const idParts = [ice && `ICE : ${ice}`, identifiantFiscal && `IF : ${identifiantFiscal}`, rc && `RC : ${rc}`].filter(Boolean);
+  let idHeight = 0;
   if (idParts.length) {
-    doc.fillColor(SLATE).fontSize(9).font("Helvetica").text(idParts.join("   "), 50, localY, { width: 270 });
+    doc.fillColor(SLATE).fontSize(9).font("Helvetica");
+    idHeight = doc.heightOfString(idParts.join("   "), { width: colWidth });
+    doc.text(idParts.join("   "), 50, localY, { width: colWidth });
   }
+  const leftBottom = localY + idHeight;
 
   doc.fillColor(SLATE).fontSize(9).font("Helvetica-Bold").text("DATE D'EMISSION", 350, y, { width: 195, align: "right" });
   doc.fillColor(NAVY).fontSize(10).font("Helvetica").text(dateEmission || "—", 350, y + 14, { width: 195, align: "right" });
+  let rightBottom = y + 30;
   if (dateAutreLabel) {
     doc.fillColor(SLATE).fontSize(9).font("Helvetica-Bold").text(dateAutreLabel, 350, y + 34, { width: 195, align: "right" });
     doc.fillColor(NAVY).fontSize(10).font("Helvetica").text(dateAutre || "—", 350, y + 48, { width: 195, align: "right" });
+    rightBottom = y + 64;
   }
 
-  return y + 90;
+  return Math.max(leftBottom, rightBottom) + 24;
 }
 
 function drawTotals(doc, y, { montantHt, tauxTva, montantTva, montantTtc }) {
@@ -155,7 +173,7 @@ export async function generateOffrePdf(offre, lignes, company) {
   const montantTtc = montantHt + montantTva;
 
   return renderToBuffer((doc) => {
-    drawHeader(doc, { docTitle: "DEVIS", numero: offre.numero, statutLabel: OFFRE_STATUT_LABELS[offre.statut], company });
+    drawHeader(doc, { docTitle: "OFFRE", numero: offre.numero, statutLabel: OFFRE_STATUT_LABELS[offre.statut], company });
     let y = drawClientBlock(doc, 130, {
       raisonSociale: offre.client_raison_sociale,
       adresse: offre.client_adresse,
@@ -182,9 +200,13 @@ export async function generateOffrePdf(offre, lignes, company) {
     doc.font("Helvetica").fontSize(9.5);
     lignes.forEach((l, i) => {
       const totalLigne = Number(l.quantite || 0) * Number(l.prix_unitaire_ht || 0);
-      const rowH = 20;
+      const designation = l.designation || "";
+      // Hauteur dynamique : une designation longue passe sur plusieurs lignes et
+      // ne doit pas chevaucher la ligne suivante ou le total juste en dessous.
+      const designationHeight = doc.heightOfString(designation, { width: 250 });
+      const rowH = Math.max(20, designationHeight + 10);
       if (i % 2 === 1) doc.rect(50, y, 495, rowH).fill("#f8fafc");
-      doc.fillColor(NAVY).text(l.designation || "", 58, y + 5, { width: 250 });
+      doc.fillColor(NAVY).text(designation, 58, y + 5, { width: 250 });
       doc.text(String(l.quantite ?? ""), 315, y + 5, { width: 50, align: "right" });
       doc.text(formatMAD(l.prix_unitaire_ht), 370, y + 5, { width: 80, align: "right" });
       doc.text(formatMAD(totalLigne), 460, y + 5, { width: 78, align: "right" });
