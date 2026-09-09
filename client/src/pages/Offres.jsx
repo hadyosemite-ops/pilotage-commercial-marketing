@@ -18,7 +18,14 @@ const MODES_PAIEMENT = [
   { value: "effet", label: "Effet" },
 ];
 
-const emptyLigne = () => ({ designation: "", quantite: 1, prix_unitaire_ht: 0 });
+const UNITES = [
+  { value: "forfait", label: "Forfait" },
+  { value: "jh", label: "JH" },
+  { value: "jour", label: "Jour" },
+  { value: "heure", label: "Heure" },
+];
+
+const emptyLigne = () => ({ designation: "", unite: "forfait", quantite: 1, prix_unitaire_ht: 0 });
 const emptyForm = {
   client_id: "", objet: "", opportunity_id: "", statut: "brouillon",
   date_emission: "", date_validite: "", taux_tva: 20, acompte_pourcentage: "", mode_paiement: "", notes: "", lignes: [emptyLigne()],
@@ -56,17 +63,22 @@ export default function Offres() {
     setModalOpen(true);
   }
 
-  function openEdit(o) {
+  async function openEdit(o) {
     setEditing(o);
     setError("");
+    // La liste ne contient pas les lignes : on recharge le detail complet
+    // pour ne pas perdre les lignes existantes en ouvrant la modale.
+    const { data } = await api.get(`/offres/${o.id}`);
     setForm({
       ...emptyForm,
-      ...o,
-      client_id: o.client_id || "",
-      opportunity_id: o.opportunity_id || "",
-      acompte_pourcentage: o.acompte_pourcentage ?? "",
-      mode_paiement: o.mode_paiement || "",
-      lignes: o.lignes?.length ? o.lignes.map((l) => ({ designation: l.designation, quantite: l.quantite, prix_unitaire_ht: l.prix_unitaire_ht })) : [emptyLigne()],
+      ...data,
+      client_id: data.client_id || "",
+      opportunity_id: data.opportunity_id || "",
+      acompte_pourcentage: data.acompte_pourcentage ?? "",
+      mode_paiement: data.mode_paiement || "",
+      lignes: data.lignes?.length
+        ? data.lignes.map((l) => ({ designation: l.designation, unite: l.unite || "forfait", quantite: l.quantite, prix_unitaire_ht: l.prix_unitaire_ht }))
+        : [emptyLigne()],
     });
     setModalOpen(true);
   }
@@ -227,6 +239,13 @@ export default function Offres() {
                       value={l.designation}
                       onChange={(e) => updateLigne(i, { designation: e.target.value })}
                     />
+                    <select
+                      className="w-24 rounded-lg border border-slate-300 px-2 py-2 text-sm"
+                      value={l.unite || "forfait"}
+                      onChange={(e) => updateLigne(i, { unite: e.target.value })}
+                    >
+                      {UNITES.map((u) => <option key={u.value} value={u.value}>{u.label}</option>)}
+                    </select>
                     <input
                       type="number" min="0" step="0.5"
                       className="w-20 rounded-lg border border-slate-300 px-2 py-2 text-sm"

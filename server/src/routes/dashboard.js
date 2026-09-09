@@ -48,11 +48,12 @@ router.get("/summary", ah(async (req, res) => {
   const affairesEnCours = await get(
     "SELECT COUNT(*) c, COALESCE(SUM(montant_ht * (1 + taux_tva / 100.0)),0) v FROM affaires WHERE statut = 'en_cours'"
   );
+  // factures.montant_ht n'est plus alimente directement (lignes comme les offres).
   const caFacture = await get(
-    "SELECT COALESCE(SUM(montant_ht * (1 + taux_tva / 100.0)),0) v FROM factures WHERE statut = 'payee'"
+    "SELECT COALESCE(SUM((SELECT COALESCE(SUM(quantite * prix_unitaire_ht),0) FROM facture_lignes WHERE facture_lignes.facture_id = factures.id) * (1 + taux_tva / 100.0)),0) v FROM factures WHERE statut = 'payee'"
   );
   const facturesEnRetard = await get(
-    "SELECT COUNT(*) c, COALESCE(SUM(montant_ht * (1 + taux_tva / 100.0)),0) v FROM factures WHERE statut IN ('envoyee','en_retard') AND date_echeance IS NOT NULL AND date_echeance < TO_CHAR(NOW(), 'YYYY-MM-DD')"
+    "SELECT COUNT(*) c, COALESCE(SUM((SELECT COALESCE(SUM(quantite * prix_unitaire_ht),0) FROM facture_lignes WHERE facture_lignes.facture_id = factures.id) * (1 + taux_tva / 100.0)),0) v FROM factures WHERE statut IN ('envoyee','en_retard') AND date_echeance IS NOT NULL AND date_echeance < TO_CHAR(NOW(), 'YYYY-MM-DD')"
   );
 
   res.json({

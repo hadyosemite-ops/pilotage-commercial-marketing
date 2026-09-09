@@ -9,6 +9,7 @@ router.use(requireAuth);
 
 const ALLOWED_STATUTS = ["brouillon", "envoye", "accepte", "refuse", "expire"];
 const ALLOWED_MODES_PAIEMENT = ["virement", "cheque", "especes", "effet"];
+const ALLOWED_UNITES = ["forfait", "jh", "jour", "heure"];
 
 async function withLignes(offre) {
   if (!offre) return offre;
@@ -60,8 +61,8 @@ router.post("/", ah(async (req, res) => {
     let ordre = 0;
     for (const l of (lignes || [])) {
       if (!l.designation) continue;
-      await tx.run("INSERT INTO offre_lignes (offre_id, designation, quantite, prix_unitaire_ht, ordre) VALUES (?,?,?,?,?)",
-        [offreId, l.designation, l.quantite || 1, l.prix_unitaire_ht || 0, ordre++]);
+      await tx.run("INSERT INTO offre_lignes (offre_id, designation, unite, quantite, prix_unitaire_ht, ordre) VALUES (?,?,?,?,?,?)",
+        [offreId, l.designation, ALLOWED_UNITES.includes(l.unite) ? l.unite : null, l.quantite || 1, l.prix_unitaire_ht || 0, ordre++]);
     }
     return offreId;
   });
@@ -106,8 +107,8 @@ router.put("/:id", ah(async (req, res) => {
       let ordre = 0;
       for (const l of lignes) {
         if (!l.designation) continue;
-        await tx.run("INSERT INTO offre_lignes (offre_id, designation, quantite, prix_unitaire_ht, ordre) VALUES (?,?,?,?,?)",
-          [req.params.id, l.designation, l.quantite || 1, l.prix_unitaire_ht || 0, ordre++]);
+        await tx.run("INSERT INTO offre_lignes (offre_id, designation, unite, quantite, prix_unitaire_ht, ordre) VALUES (?,?,?,?,?,?)",
+          [req.params.id, l.designation, ALLOWED_UNITES.includes(l.unite) ? l.unite : null, l.quantite || 1, l.prix_unitaire_ht || 0, ordre++]);
       }
     }
   });

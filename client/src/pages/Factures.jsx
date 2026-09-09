@@ -19,9 +19,19 @@ const MODES_PAIEMENT = [
   { value: "effet", label: "Effet" },
 ];
 
+const UNITES = [
+  { value: "forfait", label: "Forfait" },
+  { value: "jh", label: "JH" },
+  { value: "jour", label: "Jour" },
+  { value: "heure", label: "Heure" },
+];
+
+// Memes lignes (designation/unite/qte/prix) que le module Offres : parite
+// complete entre devis et facturation.
+const emptyLigne = () => ({ designation: "", unite: "forfait", quantite: 1, prix_unitaire_ht: 0 });
 const emptyForm = {
-  affaire_id: "", objet: "", montant_ht: 0, taux_tva: 20, statut: "brouillon",
-  date_emission: "", date_echeance: "", acompte_pourcentage: "", mode_paiement: "", notes: "",
+  affaire_id: "", objet: "", taux_tva: 20, statut: "brouillon",
+  date_emission: "", date_echeance: "", acompte_pourcentage: "", mode_paiement: "", notes: "", lignes: [emptyLigne()],
 };
 
 function formatMAD(v) {
@@ -57,11 +67,35 @@ export default function Factures() {
     setModalOpen(true);
   }
 
-  function openEdit(f) {
+  async function openEdit(f) {
     setEditing(f);
-    setForm({ ...emptyForm, ...f, acompte_pourcentage: f.acompte_pourcentage ?? "", mode_paiement: f.mode_paiement || "" });
     setError("");
+    // La liste ne contient pas les lignes : on recharge le detail complet
+    // pour ne pas perdre les lignes existantes en ouvrant la modale.
+    const { data } = await api.get(`/factures/${f.id}`);
+    setForm({
+      ...emptyForm,
+      ...data,
+      acompte_pourcentage: data.acompte_pourcentage ?? "",
+      mode_paiement: data.mode_paiement || "",
+      lignes: data.lignes?.length
+        ? data.lignes.map((l) => ({ designation: l.designation, unite: l.unite || "forfait", quantite: l.quantite, prix_unitaire_ht: l.prix_unitaire_ht }))
+        : [emptyLigne()],
+    });
     setModalOpen(true);
+  }
+
+  function updateLigne(i, patch) {
+    const lignes = form.lignes.map((l, idx) => (idx === i ? { ...l, ...patch } : l));
+    setForm({ ...form, lignes });
+  }
+
+  function addLigne() {
+    setForm({ ...form, lignes: [...form.lignes, emptyLigne()] });
+  }
+
+  function removeLigne(i) {
+    setForm({ ...form, lignes: form.lignes.filter((_, idx) => idx !== i) });
   }
 
   async function handleSubmit(e) {
@@ -74,6 +108,7 @@ export default function Factures() {
         ...form,
         acompte_pourcentage: form.acompte_pourcentage === "" ? null : form.acompte_pourcentage,
         mode_paiement: form.mode_paiement || null,
+        lignes: form.lignes.filter((l) => l.designation),
       };
       if (editing) await api.put(`/factures/${editing.id}`, payload);
       else await api.post("/factures", payload);
@@ -106,6 +141,9 @@ export default function Factures() {
   const affaireActive = affaires.find((a) => String(a.id) === String(affaireFilter));
   const totalTtc = factures.reduce((s, f) => s + (f.montant_ttc || 0), 0);
   const totalPaye = factures.filter((f) => f.statut === "payee").reduce((s, f) => s + (f.montant_ttc || 0), 0);
+
+  const totalLignesHt = form.lignes.reduce((s, l) => s + (Number(l.quantite) || 0) * (Number(l.prix_unitaire_ht) || 0), 0);
+  const totalTtcForm = totalLignesHt * (1 + (Number(form.taux_tva) || 0) / 100);
 
   return (
     <div>
@@ -178,8 +216,7 @@ export default function Factures() {
               {affaires.map((a) => <option key={a.id} value={a.id}>{a.numero} — {a.titre}</option>)}
             </Select>
             <Input label="Objet (ex: Acompte 30%, Solde)" required value={form.objet} onChange={(e) => setForm({ ...form, objet: e.target.value })} />
-            <div className="grid grid-cols-3 gap-4">
-              <Input label="Montant HT (MAD)" type="number" min="0" value={form.montant_ht} onChange={(e) => setForm({ ...form, montant_ht: Number(e.target.value) })} />
+            <div className="grid grid-cols-2 gap-4">
               <Input label="TVA (%)" type="number" min="0" value={form.taux_tva} onChange={(e) => setForm({ ...form, taux_tva: Number(e.target.value) })} />
               <Select label="Statut" value={form.statut} onChange={(e) => setForm({ ...form, statut: e.target.value })}>
                 {STATUTS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
@@ -196,6 +233,52 @@ export default function Factures() {
                 {MODES_PAIEMENT.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
               </Select>
             </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-slate-700">Lignes de la facture</span>
+                <Button type="button" variant="secondary" onClick={addLigne}><Plus size={14} /> Ligne</Button>
+              </div>
+              <div className="space-y-2">
+                {form.lignes.map((l, i) => (
+                  <div key={i} className="flex gap-2 items-start">
+                    <input
+                      className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                      placeholder="Désignation"
+                      value={l.designation}
+                      onChange={(e) => updateLigne(i, { designation: e.target.value })}
+                    />
+                    <select
+                      className="w-24 rounded-lg border border-slate-300 px-2 py-2 text-sm"
+                      value={l.unite || "forfait"}
+                      onChange={(e) => updateLigne(i, { unite: e.target.value })}
+                    >
+                      {UNITES.map((u) => <option key={u.value} value={u.value}>{u.label}</option>)}
+                    </select>
+                    <input
+                      type="number" min="0" step="0.5"
+                      className="w-20 rounded-lg border border-slate-300 px-2 py-2 text-sm"
+                      placeholder="Qté"
+                      value={l.quantite}
+                      onChange={(e) => updateLigne(i, { quantite: Number(e.target.value) })}
+                    />
+                    <input
+                      type="number" min="0"
+                      className="w-32 rounded-lg border border-slate-300 px-2 py-2 text-sm"
+                      placeholder="Prix HT"
+                      value={l.prix_unitaire_ht}
+                      onChange={(e) => updateLigne(i, { prix_unitaire_ht: Number(e.target.value) })}
+                    />
+                    <button type="button" onClick={() => removeLigne(i)} className="text-slate-300 hover:text-rose-600 p-2"><Trash2 size={16} /></button>
+                  </div>
+                ))}
+              </div>
+              <div className="text-right text-sm text-slate-600 mt-2">
+                Total HT : <span className="font-semibold text-slate-800">{formatMAD(totalLignesHt)}</span>
+                {" · "}Total TTC : <span className="font-semibold text-slate-800">{formatMAD(totalTtcForm)}</span>
+              </div>
+            </div>
+
             <Textarea label="Notes" rows={2} value={form.notes || ""} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="secondary" onClick={() => setModalOpen(false)}>Annuler</Button>

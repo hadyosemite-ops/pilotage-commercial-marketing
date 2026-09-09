@@ -196,6 +196,7 @@ export async function initSchema() {
       id SERIAL PRIMARY KEY,
       offre_id INTEGER NOT NULL REFERENCES offres(id) ON DELETE CASCADE,
       designation TEXT NOT NULL,
+      unite TEXT, -- forfait | jh | jour | heure
       quantite REAL NOT NULL DEFAULT 1,
       prix_unitaire_ht REAL NOT NULL DEFAULT 0,
       ordre INTEGER NOT NULL DEFAULT 0
@@ -227,6 +228,9 @@ export async function initSchema() {
     );
 
     -- Factures : une affaire peut avoir plusieurs factures (acompte, tranches, solde).
+    -- montant_ht est desormais calcule a partir de facture_lignes (comme pour les
+    -- offres) : la colonne reste pour compatibilite mais n'est plus alimentee
+    -- directement par la route.
     CREATE TABLE IF NOT EXISTS factures (
       id SERIAL PRIMARY KEY,
       numero TEXT NOT NULL UNIQUE,
@@ -244,6 +248,18 @@ export async function initSchema() {
       owner_id INTEGER REFERENCES users(id),
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    -- Lignes de facture : meme structure que offre_lignes, pour que la facturation
+    -- beneficie des memes unites/quantites/prix unitaires que les devis.
+    CREATE TABLE IF NOT EXISTS facture_lignes (
+      id SERIAL PRIMARY KEY,
+      facture_id INTEGER NOT NULL REFERENCES factures(id) ON DELETE CASCADE,
+      designation TEXT NOT NULL,
+      unite TEXT, -- forfait | jh | jour | heure
+      quantite REAL NOT NULL DEFAULT 1,
+      prix_unitaire_ht REAL NOT NULL DEFAULT 0,
+      ordre INTEGER NOT NULL DEFAULT 0
     );
 
     -- Informations de l'entreprise emettrice (identite officielle sur les devis/factures).
@@ -316,6 +332,10 @@ export async function initSchema() {
     ALTER TABLE factures ADD COLUMN IF NOT EXISTS acompte_pourcentage REAL;
     ALTER TABLE factures ADD COLUMN IF NOT EXISTS mode_paiement TEXT;
 
+    -- Unite (Forfait/JH/Jour/Heure) sur les lignes de devis, ajoutee apres la
+    -- creation initiale de offre_lignes.
+    ALTER TABLE offre_lignes ADD COLUMN IF NOT EXISTS unite TEXT;
+
     CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
     CREATE INDEX IF NOT EXISTS idx_clients_raison_sociale ON clients(raison_sociale);
     CREATE INDEX IF NOT EXISTS idx_offres_client ON offres(client_id);
@@ -332,6 +352,7 @@ export async function initSchema() {
     CREATE INDEX IF NOT EXISTS idx_affaires_statut ON affaires(statut);
     CREATE INDEX IF NOT EXISTS idx_affaires_offre ON affaires(offre_id);
     CREATE INDEX IF NOT EXISTS idx_factures_affaire ON factures(affaire_id);
+    CREATE INDEX IF NOT EXISTS idx_facture_lignes_facture ON facture_lignes(facture_id);
     CREATE INDEX IF NOT EXISTS idx_factures_statut ON factures(statut);
   `);
 }

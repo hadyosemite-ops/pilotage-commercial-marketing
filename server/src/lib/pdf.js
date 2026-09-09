@@ -202,6 +202,46 @@ const OFFRE_STATUT_LABELS = {
   expire: "Expiré",
 };
 
+const UNITE_LABELS = { forfait: "Forfait", jh: "JH", jour: "Jour", heure: "Heure" };
+
+// Tableau des lignes (designation/unite/qte/prix/total), partage entre Offres
+// et Factures : les deux modules doivent rester alignes sur les memes colonnes.
+function drawLignesTable(doc, y, lignes) {
+  const DESIG_X = 58, DESIG_W = 185;
+  const UNITE_X = 248, UNITE_W = 55;
+  const QTE_X = 308, QTE_W = 45;
+  const PRIX_X = 358, PRIX_W = 85;
+  const TOTAL_X = 448, TOTAL_W = 90;
+
+  doc.fontSize(9).font("Helvetica-Bold").fillColor("#fff");
+  doc.rect(50, y, 495, 22).fill(NAVY);
+  doc.fillColor("#fff").text("Désignation", DESIG_X, y + 6, { width: DESIG_W });
+  doc.text("Unité", UNITE_X, y + 6, { width: UNITE_W });
+  doc.text("Qté", QTE_X, y + 6, { width: QTE_W, align: "right" });
+  doc.text("Prix unit. HT", PRIX_X, y + 6, { width: PRIX_W, align: "right" });
+  doc.text("Total HT", TOTAL_X, y + 6, { width: TOTAL_W, align: "right" });
+  y += 22;
+
+  doc.font("Helvetica").fontSize(9.5);
+  lignes.forEach((l, i) => {
+    const totalLigne = Number(l.quantite || 0) * Number(l.prix_unitaire_ht || 0);
+    const designation = l.designation || "";
+    // Hauteur dynamique : une designation longue passe sur plusieurs lignes et
+    // ne doit pas chevaucher la ligne suivante ou le total juste en dessous.
+    const designationHeight = doc.heightOfString(designation, { width: DESIG_W });
+    const rowH = Math.max(20, designationHeight + 10);
+    if (i % 2 === 1) doc.rect(50, y, 495, rowH).fill("#f8fafc");
+    doc.fillColor(NAVY).text(designation, DESIG_X, y + 5, { width: DESIG_W });
+    doc.text(UNITE_LABELS[l.unite] || l.unite || "—", UNITE_X, y + 5, { width: UNITE_W });
+    doc.text(String(l.quantite ?? ""), QTE_X, y + 5, { width: QTE_W, align: "right" });
+    doc.text(formatMAD(l.prix_unitaire_ht), PRIX_X, y + 5, { width: PRIX_W, align: "right" });
+    doc.text(formatMAD(totalLigne), TOTAL_X, y + 5, { width: TOTAL_W, align: "right" });
+    y += rowH;
+  });
+  doc.moveTo(50, y).lineTo(545, y).strokeColor("#e2e8f0").stroke();
+  return y + 20;
+}
+
 export async function generateOffrePdf(offre, lignes, company) {
   const montantHt = lignes.reduce((s, l) => s + Number(l.quantite || 0) * Number(l.prix_unitaire_ht || 0), 0);
   const tauxTva = Number(offre.taux_tva) || 0;
@@ -224,32 +264,7 @@ export async function generateOffrePdf(offre, lignes, company) {
     doc.fillColor(NAVY).fontSize(11).font("Helvetica-Bold").text(offre.objet || "", 50, y);
     y += 25;
 
-    // Entete du tableau des lignes
-    doc.fontSize(9).font("Helvetica-Bold").fillColor("#fff");
-    doc.rect(50, y, 495, 22).fill(NAVY);
-    doc.fillColor("#fff").text("Désignation", 58, y + 6, { width: 250 });
-    doc.text("Qté", 315, y + 6, { width: 50, align: "right" });
-    doc.text("Prix unit. HT", 370, y + 6, { width: 80, align: "right" });
-    doc.text("Total HT", 460, y + 6, { width: 78, align: "right" });
-    y += 22;
-
-    doc.font("Helvetica").fontSize(9.5);
-    lignes.forEach((l, i) => {
-      const totalLigne = Number(l.quantite || 0) * Number(l.prix_unitaire_ht || 0);
-      const designation = l.designation || "";
-      // Hauteur dynamique : une designation longue passe sur plusieurs lignes et
-      // ne doit pas chevaucher la ligne suivante ou le total juste en dessous.
-      const designationHeight = doc.heightOfString(designation, { width: 250 });
-      const rowH = Math.max(20, designationHeight + 10);
-      if (i % 2 === 1) doc.rect(50, y, 495, rowH).fill("#f8fafc");
-      doc.fillColor(NAVY).text(designation, 58, y + 5, { width: 250 });
-      doc.text(String(l.quantite ?? ""), 315, y + 5, { width: 50, align: "right" });
-      doc.text(formatMAD(l.prix_unitaire_ht), 370, y + 5, { width: 80, align: "right" });
-      doc.text(formatMAD(totalLigne), 460, y + 5, { width: 78, align: "right" });
-      y += rowH;
-    });
-    doc.moveTo(50, y).lineTo(545, y).strokeColor("#e2e8f0").stroke();
-    y += 20;
+    y = drawLignesTable(doc, y, lignes);
 
     drawPaymentTerms(doc, y, { acomptePourcentage: offre.acompte_pourcentage, modePaiement: offre.mode_paiement });
     drawTotals(doc, y, { montantHt, tauxTva, montantTva, montantTtc });
@@ -266,8 +281,8 @@ const FACTURE_STATUT_LABELS = {
   annulee: "Annulée",
 };
 
-export async function generateFacturePdf(facture, affaire, company) {
-  const montantHt = Number(facture.montant_ht) || 0;
+export async function generateFacturePdf(facture, lignes, affaire, company) {
+  const montantHt = lignes.reduce((s, l) => s + Number(l.quantite || 0) * Number(l.prix_unitaire_ht || 0), 0);
   const tauxTva = Number(facture.taux_tva) || 0;
   const montantTva = montantHt * (tauxTva / 100);
   const montantTtc = montantHt + montantTva;
@@ -287,20 +302,11 @@ export async function generateFacturePdf(facture, affaire, company) {
 
     doc.fillColor(SLATE).fontSize(9).font("Helvetica-Bold").text("AFFAIRE", 50, y);
     doc.fillColor(NAVY).fontSize(10).font("Helvetica").text(`${affaire?.numero || ""} — ${affaire?.titre || ""}`, 50, y + 14);
-    y += 40;
+    y += 30;
+    doc.fillColor(NAVY).fontSize(11).font("Helvetica-Bold").text(facture.objet || "", 50, y);
+    y += 25;
 
-    doc.fontSize(9).font("Helvetica-Bold").fillColor("#fff");
-    doc.rect(50, y, 495, 22).fill(NAVY);
-    doc.fillColor("#fff").text("Désignation", 58, y + 6, { width: 380 });
-    doc.text("Montant HT", 460, y + 6, { width: 78, align: "right" });
-    y += 22;
-
-    doc.font("Helvetica").fontSize(9.5).fillColor(NAVY);
-    doc.text(facture.objet || "", 58, y + 5, { width: 380 });
-    doc.text(formatMAD(montantHt), 460, y + 5, { width: 78, align: "right" });
-    y += 26;
-    doc.moveTo(50, y).lineTo(545, y).strokeColor("#e2e8f0").stroke();
-    y += 20;
+    y = drawLignesTable(doc, y, lignes);
 
     drawPaymentTerms(doc, y, { acomptePourcentage: facture.acompte_pourcentage, modePaiement: facture.mode_paiement });
     drawTotals(doc, y, { montantHt, tauxTva, montantTva, montantTtc });

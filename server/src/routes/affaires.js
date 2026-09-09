@@ -8,9 +8,17 @@ router.use(requireAuth);
 
 const ALLOWED_STATUTS = ["en_cours", "terminee", "annulee"];
 
+// f.montant_ht n'est plus alimente directement (les factures ont des lignes,
+// comme les offres) : le montant de chaque facture se calcule desormais a
+// partir de facture_lignes, pas de la colonne factures.montant_ht.
 const SELECT_WITH_TOTALS = `
   SELECT a.*,
-    COALESCE((SELECT SUM(f.montant_ht * (1 + f.taux_tva / 100.0)) FROM factures f WHERE f.affaire_id = a.id AND f.statut != 'annulee'), 0) as montant_facture
+    COALESCE((
+      SELECT SUM(
+        COALESCE((SELECT SUM(fl.quantite * fl.prix_unitaire_ht) FROM facture_lignes fl WHERE fl.facture_id = f.id), 0) * (1 + f.taux_tva / 100.0)
+      )
+      FROM factures f WHERE f.affaire_id = a.id AND f.statut != 'annulee'
+    ), 0) as montant_facture
   FROM affaires a
 `;
 
