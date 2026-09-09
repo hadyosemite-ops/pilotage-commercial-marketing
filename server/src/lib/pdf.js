@@ -194,14 +194,6 @@ function drawFooter(doc, company) {
   });
 }
 
-const OFFRE_STATUT_LABELS = {
-  brouillon: "Brouillon",
-  envoye: "Envoyé",
-  accepte: "Accepté",
-  refuse: "Refusé",
-  expire: "Expiré",
-};
-
 const UNITE_LABELS = { forfait: "Forfait", jh: "JH", jour: "Jour", heure: "Heure" };
 
 // Tableau des lignes (designation/unite/qte/prix/total), partage entre Offres
@@ -249,7 +241,7 @@ export async function generateOffrePdf(offre, lignes, company) {
   const montantTtc = montantHt + montantTva;
 
   return renderToBuffer((doc) => {
-    drawHeader(doc, { docTitle: "OFFRE", numero: offre.numero, statutLabel: OFFRE_STATUT_LABELS[offre.statut], company });
+    drawHeader(doc, { docTitle: "OFFRE", numero: offre.numero, company });
     let y = drawClientBlock(doc, 132, {
       raisonSociale: offre.client_raison_sociale,
       adresse: offre.client_adresse,
