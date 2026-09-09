@@ -92,7 +92,6 @@ function drawHeader(doc, { docTitle, numero, statutLabel, company }) {
 function drawSignatureBlock(doc, company) {
   const x = 350, y = 635, w = 195, h = 85;
   doc.fillColor(SLATE).fontSize(8).font("Helvetica-Bold").text("CACHET & SIGNATURE", x, y - 14);
-  doc.roundedRect(x, y, w, h, 4).strokeColor("#e2e8f0").lineWidth(1).stroke();
 
   const cachetBuffer = dataUriToBuffer(company?.cachet_data);
   const signatureBuffer = dataUriToBuffer(company?.signature_data);
@@ -140,7 +139,7 @@ function drawClientBlock(doc, y, { raisonSociale, adresse, ice, identifiantFisca
     rightBottom = y + 64;
   }
 
-  return Math.max(leftBottom, rightBottom) + 24;
+  return Math.max(leftBottom, rightBottom) + 36;
 }
 
 function drawTotals(doc, y, { montantHt, tauxTva, montantTva, montantTtc }) {
@@ -171,14 +170,26 @@ function drawPaymentTerms(doc, y, { acomptePourcentage, modePaiement }) {
   doc.fillColor(NAVY).fontSize(9).font("Helvetica").text(parts.join("\n"), 50, y + 14, { width: 270, lineGap: 2 });
 }
 
-function drawFooter(doc, notes) {
-  doc.fontSize(8).fillColor("#94a3b8").font("Helvetica")
-    .text("Document genere par Pilotage Commercial & Marketing — Smart Industry", 50, 760, { width: 495, align: "center" });
-  if (notes) {
-    // Largeur limitee a la colonne de gauche pour ne pas passer sous le bloc cachet/signature.
-    doc.fontSize(9).fillColor(SLATE).font("Helvetica-Bold").text("Notes", 50, 635);
-    doc.fontSize(9).fillColor(SLATE).font("Helvetica").text(notes, 50, 649, { width: 280 });
-  }
+// Pied de page : coordonnees de NOTRE entreprise, centrees en bas de page
+// (remplace l'ancienne mention generique "Document genere par...").
+function drawFooter(doc, company) {
+  const idBits = [
+    company?.ice && `ICE: ${company.ice}`,
+    company?.identifiant_fiscal && `IF: ${company.identifiant_fiscal}`,
+    company?.tp && `TP: ${company.tp}`,
+    company?.telephone && `Tél: ${company.telephone}`,
+    company?.email,
+  ].filter(Boolean).join("   ");
+
+  const lines = [company?.raison_sociale, company?.adresse, idBits].filter(Boolean);
+  if (!lines.length) return;
+
+  doc.fontSize(8).fillColor("#94a3b8").font("Helvetica");
+  let y = 745;
+  lines.forEach((line) => {
+    doc.text(line, 50, y, { width: 495, align: "center" });
+    y += 11;
+  });
 }
 
 const OFFRE_STATUT_LABELS = {
@@ -241,7 +252,7 @@ export async function generateOffrePdf(offre, lignes, company) {
     drawPaymentTerms(doc, y, { acomptePourcentage: offre.acompte_pourcentage, modePaiement: offre.mode_paiement });
     drawTotals(doc, y, { montantHt, tauxTva, montantTva, montantTtc });
     drawSignatureBlock(doc, company);
-    drawFooter(doc, offre.notes);
+    drawFooter(doc, company);
   });
 }
 
@@ -292,6 +303,6 @@ export async function generateFacturePdf(facture, affaire, company) {
     drawPaymentTerms(doc, y, { acomptePourcentage: facture.acompte_pourcentage, modePaiement: facture.mode_paiement });
     drawTotals(doc, y, { montantHt, tauxTva, montantTva, montantTtc });
     drawSignatureBlock(doc, company);
-    drawFooter(doc, facture.notes);
+    drawFooter(doc, company);
   });
 }
