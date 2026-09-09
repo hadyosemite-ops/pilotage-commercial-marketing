@@ -147,15 +147,38 @@ export async function initSchema() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
+    -- Base clients : identite officielle utilisee pour la facturation (ICE/IF/RC).
+    CREATE TABLE IF NOT EXISTS clients (
+      id SERIAL PRIMARY KEY,
+      raison_sociale TEXT NOT NULL,
+      adresse TEXT,
+      ice TEXT,
+      identifiant_fiscal TEXT,
+      rc TEXT,
+      contact_nom TEXT,
+      contact_email TEXT,
+      contact_telephone TEXT,
+      notes TEXT,
+      owner_id INTEGER REFERENCES users(id),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
     -- Offres (devis) : peuvent naitre d'une opportunite gagnee, contiennent des lignes,
-    -- et donnent naissance a une Affaire une fois acceptees.
+    -- et donnent naissance a une Affaire une fois acceptees. Les champs client_* sont
+    -- une "photo" de l'identite du client au moment du devis (l'edition ulterieure de
+    -- la fiche client ne doit pas modifier retroactivement un devis deja emis).
     CREATE TABLE IF NOT EXISTS offres (
       id SERIAL PRIMARY KEY,
       numero TEXT NOT NULL UNIQUE,
       opportunity_id INTEGER REFERENCES opportunities(id) ON DELETE SET NULL,
       affaire_id INTEGER,
-      client_nom TEXT NOT NULL,
-      client_societe TEXT,
+      client_id INTEGER REFERENCES clients(id) ON DELETE SET NULL,
+      client_raison_sociale TEXT NOT NULL,
+      client_adresse TEXT,
+      client_ice TEXT,
+      client_identifiant_fiscal TEXT,
+      client_rc TEXT,
       objet TEXT NOT NULL,
       statut TEXT NOT NULL DEFAULT 'brouillon', -- brouillon | envoye | accepte | refuse | expire
       date_emission TEXT,
@@ -184,8 +207,12 @@ export async function initSchema() {
       offre_id INTEGER REFERENCES offres(id) ON DELETE SET NULL,
       opportunity_id INTEGER REFERENCES opportunities(id) ON DELETE SET NULL,
       titre TEXT NOT NULL,
-      client_nom TEXT NOT NULL,
-      client_societe TEXT,
+      client_id INTEGER REFERENCES clients(id) ON DELETE SET NULL,
+      client_raison_sociale TEXT NOT NULL,
+      client_adresse TEXT,
+      client_ice TEXT,
+      client_identifiant_fiscal TEXT,
+      client_rc TEXT,
       montant_ht REAL NOT NULL DEFAULT 0,
       taux_tva REAL NOT NULL DEFAULT 20,
       statut TEXT NOT NULL DEFAULT 'en_cours', -- en_cours | terminee | annulee
@@ -220,8 +247,23 @@ export async function initSchema() {
     ALTER TABLE action_plan ADD COLUMN IF NOT EXISTS origine_id INTEGER;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token TEXT;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expires TIMESTAMPTZ;
+    ALTER TABLE offres ADD COLUMN IF NOT EXISTS client_id INTEGER REFERENCES clients(id) ON DELETE SET NULL;
+    ALTER TABLE offres ADD COLUMN IF NOT EXISTS client_raison_sociale TEXT;
+    ALTER TABLE offres ADD COLUMN IF NOT EXISTS client_adresse TEXT;
+    ALTER TABLE offres ADD COLUMN IF NOT EXISTS client_ice TEXT;
+    ALTER TABLE offres ADD COLUMN IF NOT EXISTS client_identifiant_fiscal TEXT;
+    ALTER TABLE offres ADD COLUMN IF NOT EXISTS client_rc TEXT;
+    ALTER TABLE affaires ADD COLUMN IF NOT EXISTS client_id INTEGER REFERENCES clients(id) ON DELETE SET NULL;
+    ALTER TABLE affaires ADD COLUMN IF NOT EXISTS client_raison_sociale TEXT;
+    ALTER TABLE affaires ADD COLUMN IF NOT EXISTS client_adresse TEXT;
+    ALTER TABLE affaires ADD COLUMN IF NOT EXISTS client_ice TEXT;
+    ALTER TABLE affaires ADD COLUMN IF NOT EXISTS client_identifiant_fiscal TEXT;
+    ALTER TABLE affaires ADD COLUMN IF NOT EXISTS client_rc TEXT;
 
     CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
+    CREATE INDEX IF NOT EXISTS idx_clients_raison_sociale ON clients(raison_sociale);
+    CREATE INDEX IF NOT EXISTS idx_offres_client ON offres(client_id);
+    CREATE INDEX IF NOT EXISTS idx_affaires_client ON affaires(client_id);
     CREATE INDEX IF NOT EXISTS idx_opps_stage ON opportunities(stage);
     CREATE INDEX IF NOT EXISTS idx_actions_channel ON marketing_actions(channel);
     CREATE INDEX IF NOT EXISTS idx_action_plan_status ON action_plan(status);

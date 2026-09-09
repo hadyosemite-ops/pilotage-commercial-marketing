@@ -11,7 +11,7 @@ const STATUTS = [
 ];
 
 const emptyForm = {
-  titre: "", client_nom: "", client_societe: "", montant_ht: 0, taux_tva: 20,
+  titre: "", client_id: "", montant_ht: 0, taux_tva: 20,
   statut: "en_cours", date_debut: "", date_fin_prevue: "", notes: "",
 };
 
@@ -22,6 +22,7 @@ function formatMAD(v) {
 export default function Affaires() {
   const navigate = useNavigate();
   const [affaires, setAffaires] = useState([]);
+  const [clients, setClients] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
@@ -32,7 +33,10 @@ export default function Affaires() {
     setAffaires(data);
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    api.get("/clients").then(({ data }) => setClients(data));
+  }, []);
 
   function openCreate() {
     setEditing(null);
@@ -42,12 +46,13 @@ export default function Affaires() {
 
   function openEdit(a) {
     setEditing(a);
-    setForm({ ...emptyForm, ...a });
+    setForm({ ...emptyForm, ...a, client_id: a.client_id || "" });
     setModalOpen(true);
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (!form.client_id) return;
     setSaving(true);
     try {
       if (editing) await api.put(`/affaires/${editing.id}`, form);
@@ -98,7 +103,7 @@ export default function Affaires() {
                   <td className="py-3 px-4 text-slate-500 whitespace-nowrap">{a.numero}</td>
                   <td className="py-3 px-4">
                     <p className="text-slate-700 font-medium">{a.titre}</p>
-                    <p className="text-xs text-slate-400">{a.client_nom}{a.client_societe ? ` · ${a.client_societe}` : ""}</p>
+                    <p className="text-xs text-slate-400">{a.client_raison_sociale}</p>
                   </td>
                   <td className="py-3 px-4 whitespace-nowrap font-medium text-slate-700">{formatMAD(a.montant_ttc)}</td>
                   <td className="py-3 px-4 whitespace-nowrap text-slate-500">{formatMAD(a.montant_facture)}</td>
@@ -122,10 +127,10 @@ export default function Affaires() {
         <Modal title={editing ? "Modifier l'affaire" : "Nouvelle affaire"} onClose={() => setModalOpen(false)} wide>
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input label="Titre" required value={form.titre} onChange={(e) => setForm({ ...form, titre: e.target.value })} />
-            <div className="grid grid-cols-2 gap-4">
-              <Input label="Client" required value={form.client_nom} onChange={(e) => setForm({ ...form, client_nom: e.target.value })} />
-              <Input label="Société (optionnel)" value={form.client_societe || ""} onChange={(e) => setForm({ ...form, client_societe: e.target.value })} />
-            </div>
+            <Select label="Client" required value={form.client_id} onChange={(e) => setForm({ ...form, client_id: e.target.value })}>
+              <option value="">— Choisir un client —</option>
+              {clients.map((c) => <option key={c.id} value={c.id}>{c.raison_sociale}</option>)}
+            </Select>
             <div className="grid grid-cols-3 gap-4">
               <Input label="Montant HT (MAD)" type="number" min="0" value={form.montant_ht} onChange={(e) => setForm({ ...form, montant_ht: Number(e.target.value) })} />
               <Input label="TVA (%)" type="number" min="0" value={form.taux_tva} onChange={(e) => setForm({ ...form, taux_tva: Number(e.target.value) })} />

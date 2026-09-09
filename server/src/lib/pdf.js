@@ -40,11 +40,17 @@ function drawHeader(doc, { docTitle, numero, statutLabel }) {
   doc.moveTo(50, 110).lineTo(545, 110).strokeColor("#e2e8f0").lineWidth(1).stroke();
 }
 
-function drawClientBlock(doc, y, { clientNom, clientSociete, dateEmission, dateAutre, dateAutreLabel }) {
+function drawClientBlock(doc, y, { raisonSociale, adresse, ice, identifiantFiscal, rc, dateEmission, dateAutre, dateAutreLabel }) {
   doc.fillColor(SLATE).fontSize(9).font("Helvetica-Bold").text("CLIENT", 50, y);
-  doc.fillColor(NAVY).fontSize(11).font("Helvetica-Bold").text(clientNom || "—", 50, y + 14);
-  if (clientSociete) {
-    doc.fillColor(SLATE).fontSize(10).font("Helvetica").text(clientSociete, 50, y + 30);
+  doc.fillColor(NAVY).fontSize(11).font("Helvetica-Bold").text(raisonSociale || "—", 50, y + 14);
+  let localY = y + 30;
+  if (adresse) {
+    doc.fillColor(SLATE).fontSize(9).font("Helvetica").text(adresse, 50, localY, { width: 270 });
+    localY += 13;
+  }
+  const idParts = [ice && `ICE : ${ice}`, identifiantFiscal && `IF : ${identifiantFiscal}`, rc && `RC : ${rc}`].filter(Boolean);
+  if (idParts.length) {
+    doc.fillColor(SLATE).fontSize(9).font("Helvetica").text(idParts.join("   "), 50, localY, { width: 270 });
   }
 
   doc.fillColor(SLATE).fontSize(9).font("Helvetica-Bold").text("DATE D'EMISSION", 350, y, { width: 195, align: "right" });
@@ -54,7 +60,7 @@ function drawClientBlock(doc, y, { clientNom, clientSociete, dateEmission, dateA
     doc.fillColor(NAVY).fontSize(10).font("Helvetica").text(dateAutre || "—", 350, y + 48, { width: 195, align: "right" });
   }
 
-  return y + 75;
+  return y + 90;
 }
 
 function drawTotals(doc, y, { montantHt, tauxTva, montantTva, montantTtc }) {
@@ -98,8 +104,11 @@ export async function generateOffrePdf(offre, lignes) {
   return renderToBuffer((doc) => {
     drawHeader(doc, { docTitle: "DEVIS", numero: offre.numero, statutLabel: OFFRE_STATUT_LABELS[offre.statut] });
     let y = drawClientBlock(doc, 130, {
-      clientNom: offre.client_nom,
-      clientSociete: offre.client_societe,
+      raisonSociale: offre.client_raison_sociale,
+      adresse: offre.client_adresse,
+      ice: offre.client_ice,
+      identifiantFiscal: offre.client_identifiant_fiscal,
+      rc: offre.client_rc,
       dateEmission: offre.date_emission,
       dateAutre: offre.date_validite,
       dateAutreLabel: "VALIDE JUSQU'AU",
@@ -153,8 +162,11 @@ export async function generateFacturePdf(facture, affaire) {
   return renderToBuffer((doc) => {
     drawHeader(doc, { docTitle: "FACTURE", numero: facture.numero, statutLabel: FACTURE_STATUT_LABELS[facture.statut] });
     let y = drawClientBlock(doc, 130, {
-      clientNom: affaire?.client_nom,
-      clientSociete: affaire?.client_societe,
+      raisonSociale: affaire?.client_raison_sociale,
+      adresse: affaire?.client_adresse,
+      ice: affaire?.client_ice,
+      identifiantFiscal: affaire?.client_identifiant_fiscal,
+      rc: affaire?.client_rc,
       dateEmission: facture.date_emission,
       dateAutre: facture.date_echeance,
       dateAutreLabel: "ECHEANCE",

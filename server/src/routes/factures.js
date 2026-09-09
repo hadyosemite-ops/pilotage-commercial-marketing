@@ -10,7 +10,7 @@ router.use(requireAuth);
 const ALLOWED_STATUTS = ["brouillon", "envoyee", "payee", "en_retard", "annulee"];
 
 const SELECT_WITH_AFFAIRE = `
-  SELECT f.*, a.numero as affaire_numero, a.titre as affaire_titre, a.client_nom as affaire_client_nom
+  SELECT f.*, a.numero as affaire_numero, a.titre as affaire_titre, a.client_raison_sociale as affaire_client_raison_sociale
   FROM factures f
   LEFT JOIN affaires a ON a.id = f.affaire_id
 `;

@@ -128,7 +128,7 @@ export default function Factures() {
                   <td className="py-3 px-4 text-slate-500 whitespace-nowrap">{f.numero}</td>
                   <td className="py-3 px-4">
                     <p className="text-slate-700">{f.affaire_numero}</p>
-                    <p className="text-xs text-slate-400">{f.affaire_client_nom}</p>
+                    <p className="text-xs text-slate-400">{f.affaire_client_raison_sociale}</p>
                   </td>
                   <td className="py-3 px-4 text-slate-600 max-w-xs truncate">{f.objet}</td>
                   <td className="py-3 px-4 whitespace-nowrap font-medium text-slate-700">{formatMAD(f.montant_ttc)}</td>

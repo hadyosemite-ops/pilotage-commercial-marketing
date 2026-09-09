@@ -13,7 +13,7 @@ const STATUTS = [
 
 const emptyLigne = () => ({ designation: "", quantite: 1, prix_unitaire_ht: 0 });
 const emptyForm = {
-  client_nom: "", client_societe: "", objet: "", opportunity_id: "", statut: "brouillon",
+  client_id: "", objet: "", opportunity_id: "", statut: "brouillon",
   date_emission: "", date_validite: "", taux_tva: 20, notes: "", lignes: [emptyLigne()],
 };
 
@@ -24,6 +24,7 @@ function formatMAD(v) {
 export default function Offres() {
   const [offres, setOffres] = useState([]);
   const [opportunities, setOpportunities] = useState([]);
+  const [clients, setClients] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
@@ -37,6 +38,7 @@ export default function Offres() {
   useEffect(() => {
     load();
     api.get("/opportunities").then(({ data }) => setOpportunities(data));
+    api.get("/clients").then(({ data }) => setClients(data));
   }, []);
 
   function openCreate() {
@@ -50,6 +52,7 @@ export default function Offres() {
     setForm({
       ...emptyForm,
       ...o,
+      client_id: o.client_id || "",
       opportunity_id: o.opportunity_id || "",
       lignes: o.lignes?.length ? o.lignes.map((l) => ({ designation: l.designation, quantite: l.quantite, prix_unitaire_ht: l.prix_unitaire_ht })) : [emptyLigne()],
     });
@@ -71,6 +74,7 @@ export default function Offres() {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (!form.client_id) return;
     setSaving(true);
     try {
       const payload = { ...form, opportunity_id: form.opportunity_id || null, lignes: form.lignes.filter((l) => l.designation) };
@@ -132,10 +136,7 @@ export default function Offres() {
               {offres.map((o) => (
                 <tr key={o.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
                   <td className="py-3 px-4 text-slate-500 whitespace-nowrap">{o.numero}</td>
-                  <td className="py-3 px-4 text-slate-700">
-                    {o.client_nom}
-                    {o.client_societe && <span className="text-slate-400"> · {o.client_societe}</span>}
-                  </td>
+                  <td className="py-3 px-4 text-slate-700">{o.client_raison_sociale}</td>
                   <td className="py-3 px-4 text-slate-600 max-w-xs truncate">{o.objet}</td>
                   <td className="py-3 px-4 whitespace-nowrap font-medium text-slate-700">{formatMAD(o.montant_ttc)}</td>
                   <td className="py-3 px-4 whitespace-nowrap"><Badge value={o.statut} label={STATUTS.find((s) => s.value === o.statut)?.label} /></td>
@@ -159,10 +160,13 @@ export default function Offres() {
       {modalOpen && (
         <Modal title={editing ? "Modifier l'offre" : "Nouvelle offre"} onClose={() => setModalOpen(false)} wide>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <Input label="Client" required value={form.client_nom} onChange={(e) => setForm({ ...form, client_nom: e.target.value })} />
-              <Input label="Société (optionnel)" value={form.client_societe || ""} onChange={(e) => setForm({ ...form, client_societe: e.target.value })} />
-            </div>
+            <Select label="Client" required value={form.client_id} onChange={(e) => setForm({ ...form, client_id: e.target.value })}>
+              <option value="">— Choisir un client —</option>
+              {clients.map((c) => <option key={c.id} value={c.id}>{c.raison_sociale}</option>)}
+            </Select>
+            {clients.length === 0 && (
+              <p className="text-xs text-amber-600">Aucun client enregistré. Ajoute d'abord un client dans le module Clients.</p>
+            )}
             <Input label="Objet du devis" required value={form.objet} onChange={(e) => setForm({ ...form, objet: e.target.value })} />
 
             <div className="grid grid-cols-3 gap-4">

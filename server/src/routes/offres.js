@@ -38,16 +38,20 @@ router.get("/:id", ah(async (req, res) => {
 }));
 
 router.post("/", ah(async (req, res) => {
-  const { opportunity_id, client_nom, client_societe, objet, statut, date_emission, date_validite, taux_tva, notes, lignes } = req.body || {};
-  if (!client_nom || !objet) return res.status(400).json({ error: "Client et objet requis" });
+  const { opportunity_id, client_id, objet, statut, date_emission, date_validite, taux_tva, notes, lignes } = req.body || {};
+  if (!client_id || !objet) return res.status(400).json({ error: "Client et objet requis" });
+
+  const client = await get("SELECT * FROM clients WHERE id = ?", [client_id]);
+  if (!client) return res.status(400).json({ error: "Client introuvable" });
 
   const numero = await nextNumero("DEV", "offres");
   const result = await withTransaction(async (tx) => {
     const info = await tx.run(`
-      INSERT INTO offres (numero, opportunity_id, client_nom, client_societe, objet, statut, date_emission, date_validite, taux_tva, notes, owner_id)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?) RETURNING id
-    `, [numero, opportunity_id || null, client_nom, client_societe || null, objet,
-      ALLOWED_STATUTS.includes(statut) ? statut : "brouillon",
+      INSERT INTO offres (numero, opportunity_id, client_id, client_raison_sociale, client_adresse, client_ice, client_identifiant_fiscal, client_rc,
+        objet, statut, date_emission, date_validite, taux_tva, notes, owner_id)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING id
+    `, [numero, opportunity_id || null, client.id, client.raison_sociale, client.adresse, client.ice, client.identifiant_fiscal, client.rc,
+      objet, ALLOWED_STATUTS.includes(statut) ? statut : "brouillon",
       date_emission || null, date_validite || null, taux_tva ?? 20, notes || null, req.user.id]);
 
     const offreId = info.lastInsertRowid;
@@ -67,13 +71,28 @@ router.put("/:id", ah(async (req, res) => {
   const existing = await get("SELECT * FROM offres WHERE id = ?", [req.params.id]);
   if (!existing) return res.status(404).json({ error: "Offre introuvable" });
 
-  const { opportunity_id, client_nom, client_societe, objet, statut, date_emission, date_validite, taux_tva, notes, lignes } = req.body || {};
+  const { opportunity_id, client_id, objet, statut, date_emission, date_validite, taux_tva, notes, lignes } = req.body || {};
+
+  let clientSnapshot = {
+    client_id: existing.client_id, client_raison_sociale: existing.client_raison_sociale,
+    client_adresse: existing.client_adresse, client_ice: existing.client_ice,
+    client_identifiant_fiscal: existing.client_identifiant_fiscal, client_rc: existing.client_rc,
+  };
+  if (client_id && String(client_id) !== String(existing.client_id)) {
+    const client = await get("SELECT * FROM clients WHERE id = ?", [client_id]);
+    if (!client) return res.status(400).json({ error: "Client introuvable" });
+    clientSnapshot = {
+      client_id: client.id, client_raison_sociale: client.raison_sociale, client_adresse: client.adresse,
+      client_ice: client.ice, client_identifiant_fiscal: client.identifiant_fiscal, client_rc: client.rc,
+    };
+  }
 
   await withTransaction(async (tx) => {
     await tx.run(`
-      UPDATE offres SET opportunity_id=?, client_nom=?, client_societe=?, objet=?, statut=?, date_emission=?,
-        date_validite=?, taux_tva=?, notes=?, updated_at=NOW() WHERE id=?
-    `, [opportunity_id ?? existing.opportunity_id, client_nom ?? existing.client_nom, client_societe ?? existing.client_societe,
+      UPDATE offres SET opportunity_id=?, client_id=?, client_raison_sociale=?, client_adresse=?, client_ice=?, client_identifiant_fiscal=?, client_rc=?,
+        objet=?, statut=?, date_emission=?, date_validite=?, taux_tva=?, notes=?, updated_at=NOW() WHERE id=?
+    `, [opportunity_id ?? existing.opportunity_id, clientSnapshot.client_id, clientSnapshot.client_raison_sociale,
+      clientSnapshot.client_adresse, clientSnapshot.client_ice, clientSnapshot.client_identifiant_fiscal, clientSnapshot.client_rc,
       objet ?? existing.objet, ALLOWED_STATUTS.includes(statut) ? statut : existing.statut,
       date_emission ?? existing.date_emission, date_validite ?? existing.date_validite,
       taux_tva ?? existing.taux_tva, notes ?? existing.notes, req.params.id]);
@@ -106,10 +125,11 @@ router.post("/:id/accepter", ah(async (req, res) => {
   const numero = await nextNumero("AFF", "affaires");
   const affaireId = await withTransaction(async (tx) => {
     const info = await tx.run(`
-      INSERT INTO affaires (numero, offre_id, opportunity_id, titre, client_nom, client_societe, montant_ht, taux_tva, statut, owner_id)
-      VALUES (?,?,?,?,?,?,?,?,?,?) RETURNING id
-    `, [numero, offre.id, offre.opportunity_id, offre.objet, offre.client_nom, offre.client_societe,
-      offre.montant_ht, offre.taux_tva, "en_cours", req.user.id]);
+      INSERT INTO affaires (numero, offre_id, opportunity_id, titre, client_id, client_raison_sociale, client_adresse, client_ice, client_identifiant_fiscal, client_rc,
+        montant_ht, taux_tva, statut, owner_id)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING id
+    `, [numero, offre.id, offre.opportunity_id, offre.objet, offre.client_id, offre.client_raison_sociale, offre.client_adresse,
+      offre.client_ice, offre.client_identifiant_fiscal, offre.client_rc, offre.montant_ht, offre.taux_tva, "en_cours", req.user.id]);
     await tx.run("UPDATE offres SET statut='accepte', affaire_id=?, updated_at=NOW() WHERE id=?", [info.lastInsertRowid, offre.id]);
     return info.lastInsertRowid;
   });

@@ -37,15 +37,20 @@ router.get("/:id", ah(async (req, res) => {
 }));
 
 router.post("/", ah(async (req, res) => {
-  const { opportunity_id, titre, client_nom, client_societe, montant_ht, taux_tva, statut, date_debut, date_fin_prevue, notes } = req.body || {};
-  if (!titre || !client_nom) return res.status(400).json({ error: "Titre et client requis" });
+  const { opportunity_id, titre, client_id, montant_ht, taux_tva, statut, date_debut, date_fin_prevue, notes } = req.body || {};
+  if (!titre || !client_id) return res.status(400).json({ error: "Titre et client requis" });
+
+  const client = await get("SELECT * FROM clients WHERE id = ?", [client_id]);
+  if (!client) return res.status(400).json({ error: "Client introuvable" });
 
   const numero = await nextNumero("AFF", "affaires");
   const info = await run(`
-    INSERT INTO affaires (numero, opportunity_id, titre, client_nom, client_societe, montant_ht, taux_tva, statut, date_debut, date_fin_prevue, notes, owner_id)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?) RETURNING id
-  `, [numero, opportunity_id || null, titre, client_nom, client_societe || null, montant_ht || 0, taux_tva ?? 20,
-    ALLOWED_STATUTS.includes(statut) ? statut : "en_cours", date_debut || null, date_fin_prevue || null, notes || null, req.user.id]);
+    INSERT INTO affaires (numero, opportunity_id, titre, client_id, client_raison_sociale, client_adresse, client_ice, client_identifiant_fiscal, client_rc,
+      montant_ht, taux_tva, statut, date_debut, date_fin_prevue, notes, owner_id)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING id
+  `, [numero, opportunity_id || null, titre, client.id, client.raison_sociale, client.adresse, client.ice, client.identifiant_fiscal, client.rc,
+    montant_ht || 0, taux_tva ?? 20, ALLOWED_STATUTS.includes(statut) ? statut : "en_cours",
+    date_debut || null, date_fin_prevue || null, notes || null, req.user.id]);
 
   res.status(201).json(withComputed(await get(SELECT_WITH_TOTALS + " WHERE a.id = ?", [info.lastInsertRowid])));
 }));
@@ -55,11 +60,27 @@ router.put("/:id", ah(async (req, res) => {
   if (!existing) return res.status(404).json({ error: "Affaire introuvable" });
 
   const merged = { ...existing, ...req.body };
+
+  let clientSnapshot = {
+    client_id: existing.client_id, client_raison_sociale: existing.client_raison_sociale,
+    client_adresse: existing.client_adresse, client_ice: existing.client_ice,
+    client_identifiant_fiscal: existing.client_identifiant_fiscal, client_rc: existing.client_rc,
+  };
+  if (req.body?.client_id && String(req.body.client_id) !== String(existing.client_id)) {
+    const client = await get("SELECT * FROM clients WHERE id = ?", [req.body.client_id]);
+    if (!client) return res.status(400).json({ error: "Client introuvable" });
+    clientSnapshot = {
+      client_id: client.id, client_raison_sociale: client.raison_sociale, client_adresse: client.adresse,
+      client_ice: client.ice, client_identifiant_fiscal: client.identifiant_fiscal, client_rc: client.rc,
+    };
+  }
+
   await run(`
-    UPDATE affaires SET titre=?, client_nom=?, client_societe=?, montant_ht=?, taux_tva=?, statut=?,
-      date_debut=?, date_fin_prevue=?, notes=?, updated_at=NOW() WHERE id=?
-  `, [merged.titre, merged.client_nom, merged.client_societe, merged.montant_ht, merged.taux_tva,
-    ALLOWED_STATUTS.includes(merged.statut) ? merged.statut : existing.statut,
+    UPDATE affaires SET titre=?, client_id=?, client_raison_sociale=?, client_adresse=?, client_ice=?, client_identifiant_fiscal=?, client_rc=?,
+      montant_ht=?, taux_tva=?, statut=?, date_debut=?, date_fin_prevue=?, notes=?, updated_at=NOW() WHERE id=?
+  `, [merged.titre, clientSnapshot.client_id, clientSnapshot.client_raison_sociale, clientSnapshot.client_adresse,
+    clientSnapshot.client_ice, clientSnapshot.client_identifiant_fiscal, clientSnapshot.client_rc,
+    merged.montant_ht, merged.taux_tva, ALLOWED_STATUTS.includes(merged.statut) ? merged.statut : existing.statut,
     merged.date_debut, merged.date_fin_prevue, merged.notes, req.params.id]);
 
   res.json(withComputed(await get(SELECT_WITH_TOTALS + " WHERE a.id = ?", [req.params.id])));

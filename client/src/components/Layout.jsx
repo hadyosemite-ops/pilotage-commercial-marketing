@@ -1,7 +1,7 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Megaphone, Users, GitBranch, ListChecks, LogOut, Settings2,
-  FileText, Briefcase, Receipt,
+  FileText, Briefcase, Receipt, Building2,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 
@@ -26,6 +26,7 @@ const navSections = [
   {
     label: "Ventes",
     items: [
+      { to: "/clients", label: "Clients", icon: Building2 },
       { to: "/offres", label: "Offres", icon: FileText },
       { to: "/affaires", label: "Affaires", icon: Briefcase },
       { to: "/factures", label: "Facturation", icon: Receipt },

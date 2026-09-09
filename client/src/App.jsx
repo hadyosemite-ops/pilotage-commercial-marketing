@@ -9,6 +9,7 @@ import Marketing from "./pages/Marketing.jsx";
 import Leads from "./pages/Leads.jsx";
 import Pipeline from "./pages/Pipeline.jsx";
 import ActionPlan from "./pages/ActionPlan.jsx";
+import Clients from "./pages/Clients.jsx";
 import Offres from "./pages/Offres.jsx";
 import Affaires from "./pages/Affaires.jsx";
 import Factures from "./pages/Factures.jsx";
@@ -39,6 +40,7 @@ export default function App() {
         <Route path="leads" element={<Leads />} />
         <Route path="pipeline" element={<Pipeline />} />
         <Route path="plan-action" element={<ActionPlan />} />
+        <Route path="clients" element={<Clients />} />
         <Route path="offres" element={<Offres />} />
         <Route path="affaires" element={<Affaires />} />
         <Route path="factures" element={<Factures />} />
