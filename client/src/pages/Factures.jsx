@@ -12,9 +12,16 @@ const STATUTS = [
   { value: "annulee", label: "Annulée" },
 ];
 
+const MODES_PAIEMENT = [
+  { value: "virement", label: "Virement" },
+  { value: "cheque", label: "Chèque" },
+  { value: "especes", label: "Espèces" },
+  { value: "effet", label: "Effet" },
+];
+
 const emptyForm = {
   affaire_id: "", objet: "", montant_ht: 0, taux_tva: 20, statut: "brouillon",
-  date_emission: "", date_echeance: "", notes: "",
+  date_emission: "", date_echeance: "", acompte_pourcentage: "", mode_paiement: "", notes: "",
 };
 
 function formatMAD(v) {
@@ -52,7 +59,7 @@ export default function Factures() {
 
   function openEdit(f) {
     setEditing(f);
-    setForm({ ...emptyForm, ...f });
+    setForm({ ...emptyForm, ...f, acompte_pourcentage: f.acompte_pourcentage ?? "", mode_paiement: f.mode_paiement || "" });
     setError("");
     setModalOpen(true);
   }
@@ -63,8 +70,13 @@ export default function Factures() {
     setError("");
     setSaving(true);
     try {
-      if (editing) await api.put(`/factures/${editing.id}`, form);
-      else await api.post("/factures", form);
+      const payload = {
+        ...form,
+        acompte_pourcentage: form.acompte_pourcentage === "" ? null : form.acompte_pourcentage,
+        mode_paiement: form.mode_paiement || null,
+      };
+      if (editing) await api.put(`/factures/${editing.id}`, payload);
+      else await api.post("/factures", payload);
       setModalOpen(false);
       await load();
     } catch (err) {
@@ -176,6 +188,13 @@ export default function Factures() {
             <div className="grid grid-cols-2 gap-4">
               <Input label="Date d'émission" type="date" value={form.date_emission || ""} onChange={(e) => setForm({ ...form, date_emission: e.target.value })} />
               <Input label="Date d'échéance" type="date" value={form.date_echeance || ""} onChange={(e) => setForm({ ...form, date_echeance: e.target.value })} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <Input label="Acompte (%)" type="number" min="0" max="100" value={form.acompte_pourcentage} onChange={(e) => setForm({ ...form, acompte_pourcentage: e.target.value === "" ? "" : Number(e.target.value) })} />
+              <Select label="Mode de paiement" value={form.mode_paiement || ""} onChange={(e) => setForm({ ...form, mode_paiement: e.target.value })}>
+                <option value="">— Non précisé —</option>
+                {MODES_PAIEMENT.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+              </Select>
             </div>
             <Textarea label="Notes" rows={2} value={form.notes || ""} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
             <div className="flex justify-end gap-2 pt-2">

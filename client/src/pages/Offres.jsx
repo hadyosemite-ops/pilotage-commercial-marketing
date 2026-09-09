@@ -11,10 +11,17 @@ const STATUTS = [
   { value: "expire", label: "Expiré" },
 ];
 
+const MODES_PAIEMENT = [
+  { value: "virement", label: "Virement" },
+  { value: "cheque", label: "Chèque" },
+  { value: "especes", label: "Espèces" },
+  { value: "effet", label: "Effet" },
+];
+
 const emptyLigne = () => ({ designation: "", quantite: 1, prix_unitaire_ht: 0 });
 const emptyForm = {
   client_id: "", objet: "", opportunity_id: "", statut: "brouillon",
-  date_emission: "", date_validite: "", taux_tva: 20, notes: "", lignes: [emptyLigne()],
+  date_emission: "", date_validite: "", taux_tva: 20, acompte_pourcentage: "", mode_paiement: "", notes: "", lignes: [emptyLigne()],
 };
 
 function formatMAD(v) {
@@ -57,6 +64,8 @@ export default function Offres() {
       ...o,
       client_id: o.client_id || "",
       opportunity_id: o.opportunity_id || "",
+      acompte_pourcentage: o.acompte_pourcentage ?? "",
+      mode_paiement: o.mode_paiement || "",
       lignes: o.lignes?.length ? o.lignes.map((l) => ({ designation: l.designation, quantite: l.quantite, prix_unitaire_ht: l.prix_unitaire_ht })) : [emptyLigne()],
     });
     setModalOpen(true);
@@ -81,7 +90,13 @@ export default function Offres() {
     setError("");
     setSaving(true);
     try {
-      const payload = { ...form, opportunity_id: form.opportunity_id || null, lignes: form.lignes.filter((l) => l.designation) };
+      const payload = {
+        ...form,
+        opportunity_id: form.opportunity_id || null,
+        acompte_pourcentage: form.acompte_pourcentage === "" ? null : form.acompte_pourcentage,
+        mode_paiement: form.mode_paiement || null,
+        lignes: form.lignes.filter((l) => l.designation),
+      };
       if (editing) await api.put(`/offres/${editing.id}`, payload);
       else await api.post("/offres", payload);
       setModalOpen(false);
@@ -189,6 +204,13 @@ export default function Offres() {
             <div className="grid grid-cols-2 gap-4">
               <Input label="Date d'émission" type="date" value={form.date_emission || ""} onChange={(e) => setForm({ ...form, date_emission: e.target.value })} />
               <Input label="Valide jusqu'au" type="date" value={form.date_validite || ""} onChange={(e) => setForm({ ...form, date_validite: e.target.value })} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <Input label="Acompte (%)" type="number" min="0" max="100" value={form.acompte_pourcentage} onChange={(e) => setForm({ ...form, acompte_pourcentage: e.target.value === "" ? "" : Number(e.target.value) })} />
+              <Select label="Mode de paiement" value={form.mode_paiement || ""} onChange={(e) => setForm({ ...form, mode_paiement: e.target.value })}>
+                <option value="">— Non précisé —</option>
+                {MODES_PAIEMENT.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+              </Select>
             </div>
 
             <div>

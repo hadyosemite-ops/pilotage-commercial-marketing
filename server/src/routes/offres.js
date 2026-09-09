@@ -8,6 +8,7 @@ const router = Router();
 router.use(requireAuth);
 
 const ALLOWED_STATUTS = ["brouillon", "envoye", "accepte", "refuse", "expire"];
+const ALLOWED_MODES_PAIEMENT = ["virement", "cheque", "especes", "effet"];
 
 async function withLignes(offre) {
   if (!offre) return offre;
@@ -38,8 +39,9 @@ router.get("/:id", ah(async (req, res) => {
 }));
 
 router.post("/", ah(async (req, res) => {
-  const { opportunity_id, client_id, objet, statut, date_emission, date_validite, taux_tva, notes, lignes } = req.body || {};
+  const { opportunity_id, client_id, objet, statut, date_emission, date_validite, taux_tva, acompte_pourcentage, mode_paiement, notes, lignes } = req.body || {};
   if (!client_id || !objet) return res.status(400).json({ error: "Client et objet requis" });
+  if (mode_paiement && !ALLOWED_MODES_PAIEMENT.includes(mode_paiement)) return res.status(400).json({ error: "Mode de paiement invalide" });
 
   const client = await get("SELECT * FROM clients WHERE id = ?", [client_id]);
   if (!client) return res.status(400).json({ error: "Client introuvable" });
@@ -48,11 +50,11 @@ router.post("/", ah(async (req, res) => {
   const result = await withTransaction(async (tx) => {
     const info = await tx.run(`
       INSERT INTO offres (numero, opportunity_id, client_id, client_raison_sociale, client_adresse, client_ice, client_identifiant_fiscal, client_rc,
-        objet, statut, date_emission, date_validite, taux_tva, notes, owner_id)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING id
+        objet, statut, date_emission, date_validite, taux_tva, acompte_pourcentage, mode_paiement, notes, owner_id)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING id
     `, [numero, opportunity_id || null, client.id, client.raison_sociale, client.adresse, client.ice, client.identifiant_fiscal, client.rc,
       objet, ALLOWED_STATUTS.includes(statut) ? statut : "brouillon",
-      date_emission || null, date_validite || null, taux_tva ?? 20, notes || null, req.user.id]);
+      date_emission || null, date_validite || null, taux_tva ?? 20, acompte_pourcentage || null, mode_paiement || null, notes || null, req.user.id]);
 
     const offreId = info.lastInsertRowid;
     let ordre = 0;
@@ -71,7 +73,8 @@ router.put("/:id", ah(async (req, res) => {
   const existing = await get("SELECT * FROM offres WHERE id = ?", [req.params.id]);
   if (!existing) return res.status(404).json({ error: "Offre introuvable" });
 
-  const { opportunity_id, client_id, objet, statut, date_emission, date_validite, taux_tva, notes, lignes } = req.body || {};
+  const { opportunity_id, client_id, objet, statut, date_emission, date_validite, taux_tva, acompte_pourcentage, mode_paiement, notes, lignes } = req.body || {};
+  if (mode_paiement && !ALLOWED_MODES_PAIEMENT.includes(mode_paiement)) return res.status(400).json({ error: "Mode de paiement invalide" });
 
   let clientSnapshot = {
     client_id: existing.client_id, client_raison_sociale: existing.client_raison_sociale,
@@ -90,12 +93,13 @@ router.put("/:id", ah(async (req, res) => {
   await withTransaction(async (tx) => {
     await tx.run(`
       UPDATE offres SET opportunity_id=?, client_id=?, client_raison_sociale=?, client_adresse=?, client_ice=?, client_identifiant_fiscal=?, client_rc=?,
-        objet=?, statut=?, date_emission=?, date_validite=?, taux_tva=?, notes=?, updated_at=NOW() WHERE id=?
+        objet=?, statut=?, date_emission=?, date_validite=?, taux_tva=?, acompte_pourcentage=?, mode_paiement=?, notes=?, updated_at=NOW() WHERE id=?
     `, [opportunity_id ?? existing.opportunity_id, clientSnapshot.client_id, clientSnapshot.client_raison_sociale,
       clientSnapshot.client_adresse, clientSnapshot.client_ice, clientSnapshot.client_identifiant_fiscal, clientSnapshot.client_rc,
       objet ?? existing.objet, ALLOWED_STATUTS.includes(statut) ? statut : existing.statut,
       date_emission ?? existing.date_emission, date_validite ?? existing.date_validite,
-      taux_tva ?? existing.taux_tva, notes ?? existing.notes, req.params.id]);
+      taux_tva ?? existing.taux_tva, acompte_pourcentage ?? existing.acompte_pourcentage, mode_paiement ?? existing.mode_paiement,
+      notes ?? existing.notes, req.params.id]);
 
     if (Array.isArray(lignes)) {
       await tx.run("DELETE FROM offre_lignes WHERE offre_id = ?", [req.params.id]);

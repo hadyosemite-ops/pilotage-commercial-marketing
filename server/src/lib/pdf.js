@@ -158,6 +158,19 @@ function drawTotals(doc, y, { montantHt, tauxTva, montantTva, montantTtc }) {
   return y + 75;
 }
 
+const MODE_PAIEMENT_LABELS = { virement: "Virement", cheque: "Chèque", especes: "Espèces", effet: "Effet" };
+
+// Affiche a cote du total (colonne de gauche, meme y) : pas d'espace vertical
+// supplementaire a reserver quand ni acompte ni mode de paiement ne sont definis.
+function drawPaymentTerms(doc, y, { acomptePourcentage, modePaiement }) {
+  const parts = [];
+  if (acomptePourcentage) parts.push(`Acompte : ${acomptePourcentage}%`);
+  if (modePaiement) parts.push(`Mode de paiement : ${MODE_PAIEMENT_LABELS[modePaiement] || modePaiement}`);
+  if (!parts.length) return;
+  doc.fillColor(SLATE).fontSize(9).font("Helvetica-Bold").text("MODALITES DE PAIEMENT", 50, y);
+  doc.fillColor(NAVY).fontSize(9).font("Helvetica").text(parts.join("\n"), 50, y + 14, { width: 270, lineGap: 2 });
+}
+
 function drawFooter(doc, notes) {
   doc.fontSize(8).fillColor("#94a3b8").font("Helvetica")
     .text("Document genere par Pilotage Commercial & Marketing — Smart Industry", 50, 760, { width: 495, align: "center" });
@@ -225,6 +238,7 @@ export async function generateOffrePdf(offre, lignes, company) {
     doc.moveTo(50, y).lineTo(545, y).strokeColor("#e2e8f0").stroke();
     y += 20;
 
+    drawPaymentTerms(doc, y, { acomptePourcentage: offre.acompte_pourcentage, modePaiement: offre.mode_paiement });
     drawTotals(doc, y, { montantHt, tauxTva, montantTva, montantTtc });
     drawSignatureBlock(doc, company);
     drawFooter(doc, offre.notes);
@@ -275,6 +289,7 @@ export async function generateFacturePdf(facture, affaire, company) {
     doc.moveTo(50, y).lineTo(545, y).strokeColor("#e2e8f0").stroke();
     y += 20;
 
+    drawPaymentTerms(doc, y, { acomptePourcentage: facture.acompte_pourcentage, modePaiement: facture.mode_paiement });
     drawTotals(doc, y, { montantHt, tauxTva, montantTva, montantTtc });
     drawSignatureBlock(doc, company);
     drawFooter(doc, facture.notes);

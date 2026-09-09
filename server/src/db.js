@@ -184,6 +184,8 @@ export async function initSchema() {
       date_emission TEXT,
       date_validite TEXT,
       taux_tva REAL NOT NULL DEFAULT 20,
+      acompte_pourcentage REAL,
+      mode_paiement TEXT, -- virement | cheque | especes | effet
       notes TEXT,
       owner_id INTEGER REFERENCES users(id),
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -236,6 +238,8 @@ export async function initSchema() {
       date_emission TEXT,
       date_echeance TEXT,
       date_paiement TEXT,
+      acompte_pourcentage REAL,
+      mode_paiement TEXT, -- virement | cheque | especes | effet
       notes TEXT,
       owner_id INTEGER REFERENCES users(id),
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -305,6 +309,12 @@ export async function initSchema() {
       END IF;
     END $$;
     ALTER TABLE company_settings ADD COLUMN IF NOT EXISTS tp TEXT;
+
+    -- Modalites de paiement (acompte en % + mode de paiement) sur les offres et factures.
+    ALTER TABLE offres ADD COLUMN IF NOT EXISTS acompte_pourcentage REAL;
+    ALTER TABLE offres ADD COLUMN IF NOT EXISTS mode_paiement TEXT;
+    ALTER TABLE factures ADD COLUMN IF NOT EXISTS acompte_pourcentage REAL;
+    ALTER TABLE factures ADD COLUMN IF NOT EXISTS mode_paiement TEXT;
 
     CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
     CREATE INDEX IF NOT EXISTS idx_clients_raison_sociale ON clients(raison_sociale);
