@@ -47,7 +47,7 @@ router.post("/", ah(async (req, res) => {
   const client = await get("SELECT * FROM clients WHERE id = ?", [client_id]);
   if (!client) return res.status(400).json({ error: "Client introuvable" });
 
-  const numero = await nextNumero("DEV", "offres");
+  const numero = await nextNumero("OFF", "offres");
   const result = await withTransaction(async (tx) => {
     const info = await tx.run(`
       INSERT INTO offres (numero, opportunity_id, client_id, client_raison_sociale, client_adresse, client_ice, client_identifiant_fiscal, client_rc,
