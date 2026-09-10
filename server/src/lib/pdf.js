@@ -167,8 +167,7 @@ const MODE_PAIEMENT_LABELS = { virement: "Virement", cheque: "Chèque", especes:
 
 // Affiche a cote du total (colonne de gauche, meme y) : pas d'espace vertical
 // supplementaire a reserver quand ni acompte ni mode de paiement ne sont definis.
-// Retourne le y de fin (colonne de gauche) pour pouvoir enchainer les Notes
-// juste en dessous sans chevaucher.
+// Retourne le y de fin (colonne de gauche).
 function drawPaymentTerms(doc, y, { acomptePourcentage, modePaiement }) {
   const parts = [];
   if (acomptePourcentage) parts.push(`Acompte : ${acomptePourcentage}%`);
@@ -178,8 +177,13 @@ function drawPaymentTerms(doc, y, { acomptePourcentage, modePaiement }) {
   doc.fillColor(NAVY).fontSize(9).font("Helvetica");
   const textHeight = doc.heightOfString(parts.join("\n"), { width: 270, lineGap: 2 });
   doc.text(parts.join("\n"), 50, y + 14, { width: 270, lineGap: 2 });
-  return y + 14 + textHeight + 10;
+  return y + 14 + textHeight;
 }
+
+// Espace entre la fin du bloc modalites/total et le debut des Notes : place
+// les Notes sous le plus bas des deux blocs (modalites de paiement a gauche,
+// total prix a droite), avec un ecart genereux (x5 l'ecart initial de 10).
+const NOTES_GAP = 50;
 
 // Note saisie dans le formulaire (colonne de gauche, sous les modalites de
 // paiement) : optionnelle, n'occupe de la place que si elle est renseignee.
@@ -280,9 +284,9 @@ export async function generateOffrePdf(offre, lignes, company) {
 
     y = drawLignesTable(doc, y, lignes);
 
-    const notesY = drawPaymentTerms(doc, y, { acomptePourcentage: offre.acompte_pourcentage, modePaiement: offre.mode_paiement });
-    drawTotals(doc, y, { montantHt, tauxTva, montantTva, montantTtc });
-    drawNotes(doc, notesY, offre.notes);
+    const paymentEndY = drawPaymentTerms(doc, y, { acomptePourcentage: offre.acompte_pourcentage, modePaiement: offre.mode_paiement });
+    const totalsEndY = drawTotals(doc, y, { montantHt, tauxTva, montantTva, montantTtc });
+    drawNotes(doc, Math.max(paymentEndY, totalsEndY) + NOTES_GAP, offre.notes);
     drawSignatureBlock(doc, company);
     drawFooter(doc, company);
   });
@@ -323,9 +327,9 @@ export async function generateFacturePdf(facture, lignes, affaire, company) {
 
     y = drawLignesTable(doc, y, lignes);
 
-    const notesY = drawPaymentTerms(doc, y, { acomptePourcentage: facture.acompte_pourcentage, modePaiement: facture.mode_paiement });
-    drawTotals(doc, y, { montantHt, tauxTva, montantTva, montantTtc });
-    drawNotes(doc, notesY, facture.notes);
+    const paymentEndY = drawPaymentTerms(doc, y, { acomptePourcentage: facture.acompte_pourcentage, modePaiement: facture.mode_paiement });
+    const totalsEndY = drawTotals(doc, y, { montantHt, tauxTva, montantTva, montantTtc });
+    drawNotes(doc, Math.max(paymentEndY, totalsEndY) + NOTES_GAP, facture.notes);
     drawSignatureBlock(doc, company);
     drawFooter(doc, company);
   });
