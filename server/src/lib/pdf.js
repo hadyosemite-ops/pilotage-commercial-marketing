@@ -95,13 +95,18 @@ function drawSignatureBlock(doc, company) {
 
   const cachetBuffer = dataUriToBuffer(company?.cachet_data);
   const signatureBuffer = dataUriToBuffer(company?.signature_data);
+  // Cachet agrandi de 40% (85x69 -> 119x97) ; la signature est superposee sur
+  // la meme zone (au lieu d'etre placee a cote) comme sur un document papier
+  // ou la signature traverse le cachet.
+  const imgX = x + 8, imgY = y + 8;
+  const cachetW = 85 * 1.4, cachetH = (h - 16) * 1.4;
   try {
-    if (cachetBuffer) doc.image(cachetBuffer, x + 8, y + 8, { fit: [85, h - 16] });
+    if (cachetBuffer) doc.image(cachetBuffer, imgX, imgY, { fit: [cachetW, cachetH] });
   } catch {
     // image cachet illisible : on laisse la case vide plutot que de bloquer le PDF
   }
   try {
-    if (signatureBuffer) doc.image(signatureBuffer, x + 100, y + 8, { fit: [87, h - 16] });
+    if (signatureBuffer) doc.image(signatureBuffer, imgX, imgY, { fit: [cachetW, cachetH] });
   } catch {
     // idem pour la signature
   }
