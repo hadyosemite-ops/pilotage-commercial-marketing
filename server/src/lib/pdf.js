@@ -95,11 +95,12 @@ function drawSignatureBlock(doc, company) {
 
   const cachetBuffer = dataUriToBuffer(company?.cachet_data);
   const signatureBuffer = dataUriToBuffer(company?.signature_data);
-  // Cachet agrandi de 40% (85x69 -> 119x97) ; la signature est superposee sur
-  // la meme zone (au lieu d'etre placee a cote) comme sur un document papier
-  // ou la signature traverse le cachet.
+  // Cachet agrandi de 40% puis de 20% supplementaires (85x69 -> 143x116) ; la
+  // signature est superposee sur la meme zone (au lieu d'etre placee a cote)
+  // comme sur un document papier ou la signature traverse le cachet.
   const imgX = x + 8, imgY = y + 8;
-  const cachetW = 85 * 1.4, cachetH = (h - 16) * 1.4;
+  const CACHET_SCALE = 1.4 * 1.2;
+  const cachetW = 85 * CACHET_SCALE, cachetH = (h - 16) * CACHET_SCALE;
   try {
     if (cachetBuffer) doc.image(cachetBuffer, imgX, imgY, { fit: [cachetW, cachetH] });
   } catch {
